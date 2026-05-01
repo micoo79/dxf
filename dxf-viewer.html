@@ -2,7 +2,10 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0A0F14" />
 <title>DXF Viewer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -70,6 +73,9 @@
   /* ---------- Header ---------- */
   header {
     padding: 14px 24px;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
     border-bottom: 1px solid var(--panel-border);
     display: flex;
     align-items: center;
@@ -996,6 +1002,9 @@
   /* ---------- Footer ---------- */
   footer {
     padding: 10px 24px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
     border-top: 1px solid var(--panel-border);
     background: var(--bg-deep);
     display: flex;
@@ -1046,6 +1055,90 @@
   .error-toast.visible {
     transform: translateX(-50%) translateY(0);
   }
+
+  /* ---------- Touch / mobil ---------- */
+  /* Canvason ne triggereljen scroll/pinch-zoom alapból - mi kezeljük */
+  #canvas {
+    touch-action: none;
+  }
+
+  /* Tablet és kisebb: szűkebb panelek, érintés-baráti gombok */
+  @media (max-width: 900px) {
+    .info-panel {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+      min-width: 0;
+      max-height: calc(100% - 100px);
+      overflow: auto;
+    }
+    header { padding: 10px 14px; gap: 10px; }
+    .brand h1 { font-size: 16px; }
+    .brand .file-pill {
+      max-width: 140px;
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+    .header-btn { padding: 8px 12px; }
+    .controls {
+      bottom: 12px;
+      gap: 2px;
+    }
+    .controls button {
+      padding: 10px 12px;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    footer {
+      padding: 8px 14px;
+      font-size: 10px;
+    }
+    .drop-card {
+      padding: 32px 28px;
+      max-width: 90vw;
+    }
+    .color-modal {
+      width: 92vw !important;
+      max-width: 420px;
+    }
+  }
+
+  /* Telefon-méret: info-panel alapból csukva induljon, alsó sávként */
+  @media (max-width: 600px) {
+    .info-panel {
+      top: auto;
+      right: 8px;
+      left: 8px;
+      bottom: 60px;
+      max-height: 50vh;
+    }
+    .info-panel.visible:not(.collapsed) {
+      max-height: 50vh;
+    }
+    .controls { bottom: 8px; }
+    footer .coords {
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+    /* footer-ben ne szoruljon ki a koordináta */
+    footer { gap: 8px; }
+    /* érintés-baráti minimum tap-target a kis ikonokra */
+    .layer-visibility,
+    .layer-swatch,
+    .info-toggle,
+    .subsection-toggle {
+      min-height: 32px;
+    }
+  }
+
+  /* Touch eszközökön a hover-effektusokat ne ragadja be */
+  @media (hover: none) {
+    .header-btn:hover { border-color: var(--panel-border); color: var(--text-primary); }
+    .header-btn.primary:hover { background: var(--accent); border-color: var(--accent); color: var(--bg-deep); }
+    .controls button:hover { background: transparent; color: var(--text-secondary); }
+    .info-toggle:hover { color: var(--text-secondary); }
+  }
 </style>
 </head>
 <body>
@@ -1079,7 +1172,7 @@
         </svg>
       </div>
       <h2>DXF fájl betöltése</h2>
-      <p>Húzd ide a fájlt, vagy válassz egyet a tallózással.<br/>Támogatott: ASCII DXF (LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE, POINT)</p>
+      <p>Koppints vagy húzd ide a fájlt.<br/>Támogatott: ASCII DXF (LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE, POINT, TEXT, MTEXT, INSERT)</p>
       <label for="file-input">Fájl tallózása</label>
       <input type="file" id="file-input" accept=".dxf" />
     </div>
@@ -2208,6 +2301,91 @@ canvas.addEventListener('wheel', (e) => {
   view.y = sy + before.y * view.scale;
   render();
 }, { passive: false });
+
+/* =========================================================
+   TOUCH: 1-ujjas pan, 2-ujjas pinch zoom + pan a középponttal
+   ========================================================= */
+let touchState = null; // { mode: 'pan'|'pinch', ... }
+
+function getTouchPos(t) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  if (!dxfData) return;
+  if (e.touches.length === 1) {
+    const p = getTouchPos(e.touches[0]);
+    touchState = {
+      mode: 'pan',
+      startX: p.x,
+      startY: p.y,
+      viewX0: view.x,
+      viewY0: view.y,
+    };
+  } else if (e.touches.length === 2) {
+    const p1 = getTouchPos(e.touches[0]);
+    const p2 = getTouchPos(e.touches[1]);
+    const cx = (p1.x + p2.x) / 2;
+    const cy = (p1.y + p2.y) / 2;
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    touchState = {
+      mode: 'pinch',
+      startDist: dist || 1,
+      startScale: view.scale,
+      // a középpontot a világban rögzítjük, hogy zoom közben helyben maradjon
+      worldAnchor: screenToWorld(cx, cy),
+      lastCx: cx,
+      lastCy: cy,
+      viewX0: view.x,
+      viewY0: view.y,
+    };
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (!dxfData || !touchState) return;
+  e.preventDefault();
+  if (touchState.mode === 'pan' && e.touches.length === 1) {
+    const p = getTouchPos(e.touches[0]);
+    view.x = touchState.viewX0 + (p.x - touchState.startX);
+    view.y = touchState.viewY0 + (p.y - touchState.startY);
+    render();
+  } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
+    const p1 = getTouchPos(e.touches[0]);
+    const p2 = getTouchPos(e.touches[1]);
+    const cx = (p1.x + p2.x) / 2;
+    const cy = (p1.y + p2.y) / 2;
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+    // Új skála a kezdő-távolság arányában
+    view.scale = touchState.startScale * (dist / touchState.startDist);
+    // a horgony-pont (két ujj közepe a touchstart pillanatban) maradjon a képernyőn ahol most vannak az ujjak
+    view.x = cx - touchState.worldAnchor.x * view.scale;
+    view.y = cy + touchState.worldAnchor.y * view.scale;
+    render();
+  }
+}, { passive: false });
+
+const endTouch = (e) => {
+  if (!touchState) return;
+  // ha pinch közben egy ujj felemelkedik, váltsunk pan-re a megmaradt ujjjal
+  if (e.touches && e.touches.length === 1 && touchState.mode === 'pinch') {
+    const p = getTouchPos(e.touches[0]);
+    touchState = {
+      mode: 'pan',
+      startX: p.x,
+      startY: p.y,
+      viewX0: view.x,
+      viewY0: view.y,
+    };
+    return;
+  }
+  if (!e.touches || e.touches.length === 0) {
+    touchState = null;
+  }
+};
+canvas.addEventListener('touchend', endTouch, { passive: true });
+canvas.addEventListener('touchcancel', endTouch, { passive: true });
 
 /* =========================================================
    KONTROLL GOMBOK
