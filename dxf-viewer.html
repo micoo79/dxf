@@ -1269,39 +1269,60 @@ function aciToColor(aci) {
 function parseDxf(text) {
   // DXF fájlok pár soros formátumban tárolnak adatot:
   // [group code]\n[value]\n[group code]\n[value]\n...
+  // Robusztus olvasás: üres / whitespace sorokat átugrik, érték az EREDETI string
+  // (text codes-nál fontos a whitespace megőrzése).
   const lines = text.split(/\r\n|\r|\n/);
   const pairs = [];
-  for (let i = 0; i < lines.length - 1; i += 2) {
-    const code = parseInt(lines[i].trim(), 10);
-    const value = lines[i + 1];
-    if (Number.isNaN(code)) continue;
-    pairs.push({ code, value: value !== undefined ? value : '' });
+  let i = 0;
+  while (i < lines.length) {
+    const codeStr = lines[i].trim();
+    if (codeStr === '') { i++; continue; }
+    const code = parseInt(codeStr, 10);
+    if (Number.isNaN(code)) { i++; continue; }
+    const value = i + 1 < lines.length ? lines[i + 1] : '';
+    pairs.push({ code, value });
+    i += 2;
   }
 
   const entities = [];
   const layers = {}; // név -> { name, colorIndex, color }
+  const blocks = {}; // blokk név -> { name, baseX, baseY, entities: [] }
   const skipped = {}; // típus -> darabszám (támogatott szekciókban talált, de nem renderelt)
 
-  // Mit tudunk renderelni?
-  const RENDERABLE = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'POLYLINE', 'TEXT', 'MTEXT']);
+  // Mit tudunk renderelni? Az INSERT-eket parse után expandáljuk, így a renderer
+  // átlátható marad - viszont a parsing alatt INSERT entitásként kezeljük.
+  const RENDERABLE = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'POLYLINE', 'TEXT', 'MTEXT', 'INSERT']);
   const TEXT_TYPES = new Set(['TEXT', 'MTEXT']);
 
-  // Két szekciót dolgozunk fel: TABLES (rétegek) és ENTITIES (rajzelemek)
-  let section = null; // 'TABLES' | 'ENTITIES' | null
+  // Három szekciót dolgozunk fel: TABLES (rétegek), BLOCKS (blokk-definíciók), ENTITIES
+  let section = null; // 'TABLES' | 'BLOCKS' | 'ENTITIES' | null
   let inLayerTable = false;
   let currentLayer = null;
 
   let current = null;
   let polylineVertices = null;
+  let currentBlock = null;
+  // Hová pakoljuk az aktuálisan parse-olt entitást: ENTITIES szekcióban az entities,
+  // BLOCKS szekcióban az aktuális blokk entities tömbje.
+  let targetList = entities;
 
   const finalizeCurrent = () => {
     if (!current) return;
     if (current.type === 'POLYLINE' && polylineVertices) {
       current.vertices = polylineVertices;
     }
-    entities.push(current);
+    targetList.push(current);
     current = null;
     polylineVertices = null;
+  };
+
+  const finalizeBlock = () => {
+    finalizeCurrent();
+    if (currentBlock && currentBlock.name) {
+      blocks[currentBlock.name] = currentBlock;
+    }
+    currentBlock = null;
+    targetList = entities;
   };
 
   const finalizeLayer = () => {
@@ -1327,12 +1348,14 @@ function parseDxf(text) {
         if (next && next.code === 2) {
           const name = next.value.trim();
           if (name === 'TABLES') section = 'TABLES';
-          else if (name === 'ENTITIES') section = 'ENTITIES';
+          else if (name === 'ENTITIES') { section = 'ENTITIES'; targetList = entities; }
+          else if (name === 'BLOCKS') { section = 'BLOCKS'; targetList = entities; }
           else section = null;
         }
         continue;
       }
       if (v === 'ENDSEC') {
+        finalizeBlock(); // BLOCKS-on kívül no-op
         finalizeCurrent();
         finalizeLayer();
         section = null;
@@ -1363,8 +1386,25 @@ function parseDxf(text) {
         continue;
       }
 
-      // --- ENTITIES szekción belül ---
-      if (section !== 'ENTITIES') continue;
+      // --- BLOCKS szekción belül ---
+      if (section === 'BLOCKS') {
+        if (v === 'BLOCK') {
+          finalizeBlock();
+          currentBlock = { name: null, baseX: 0, baseY: 0, entities: [] };
+          targetList = currentBlock.entities;
+          continue;
+        }
+        if (v === 'ENDBLK') {
+          finalizeBlock();
+          continue;
+        }
+        if (!currentBlock) continue; // BLOCKS-on belül, de még nincs nyitott blokk
+        // különben fall-through: ugyanaz az entitás-feldolgozás, mint ENTITIES-ben
+      } else if (section !== 'ENTITIES') {
+        continue;
+      }
+
+      // --- Entitás-feldolgozás (ENTITIES vagy BLOCKS aktív blokkban) ---
 
       // Polyline alentitás: VERTEX
       if (v === 'VERTEX' && current && current.type === 'POLYLINE') {
@@ -1381,6 +1421,7 @@ function parseDxf(text) {
         if (v === 'POLYLINE') polylineVertices = [];
       } else {
         // Nem renderelhető entitás - csak számoljuk és átugorjuk
+        // (BLOCKS belüli skipped is megjelenik, ami pontosabb képet ad)
         skipped[v] = (skipped[v] || 0) + 1;
         current = null;
         polylineVertices = null;
@@ -1398,13 +1439,25 @@ function parseDxf(text) {
       continue;
     }
 
-    // Entitás mezői
-    if (section !== 'ENTITIES' || !current) continue;
+    // BLOCK header mezői (mielőtt megnyílik egy entitás a blokkon belül)
+    if (section === 'BLOCKS' && currentBlock && !current) {
+      if (code === 2) currentBlock.name = decodeDxfUnicode(v);
+      else if (code === 10) currentBlock.baseX = parseFloat(v);
+      else if (code === 20) currentBlock.baseY = parseFloat(v);
+      continue;
+    }
+
+    // Entitás mezői - ENTITIES vagy BLOCKS aktív blokkban
+    if (section !== 'ENTITIES' && !(section === 'BLOCKS' && currentBlock)) continue;
+    if (!current) continue;
 
     // Ha éppen polyline vertex-eket olvasunk, oda kerülnek a koordináták
     const isVertexContext = current.type === 'POLYLINE' && polylineVertices && polylineVertices.length > 0;
 
     switch (code) {
+      case 2: // INSERT: blokk-név
+        if (current.type === 'INSERT') current.name = decodeDxfUnicode(v);
+        break;
       case 8: // layer
         current.layer = decodeDxfUnicode(v);
         break;
@@ -1424,15 +1477,15 @@ function parseDxf(text) {
           current.vertices[current.vertices.length - 1].y = parseFloat(v);
         } else current.y1 = parseFloat(v);
         break;
-      case 1: // text content (TEXT, MTEXT)
+      case 1: // text content (TEXT, MTEXT) - whitespace megőrzve a value-ból
         if (current.type === 'TEXT' || current.type === 'MTEXT') {
           // MTEXT-nél több 1-es és 3-as kód is lehet, ezeket konkatenáljuk
-          current.text = (current.text || '') + decodeDxfUnicode(v);
+          current.text = (current.text || '') + decodeDxfUnicode(value);
         }
         break;
-      case 3: // MTEXT folytatás
+      case 3: // MTEXT folytatás - whitespace megőrzve
         if (current.type === 'MTEXT') {
-          current.text = (current.text || '') + decodeDxfUnicode(v);
+          current.text = (current.text || '') + decodeDxfUnicode(value);
         }
         break;
       case 11: current.x2 = parseFloat(v); break;
@@ -1444,34 +1497,137 @@ function parseDxf(text) {
           current.radius = parseFloat(v);
         }
         break;
+      case 41: // INSERT X-skála (LWPOLYLINE szélesség nem támogatott itt)
+        if (current.type === 'INSERT') current.xscale = parseFloat(v);
+        else if (current.type === 'MTEXT') current.refWidth = parseFloat(v);
+        break;
+      case 42: // INSERT Y-skála VAGY LWPOLYLINE/POLYLINE vertex bulge
+        if (current.type === 'INSERT') {
+          current.yscale = parseFloat(v);
+        } else if (current.type === 'LWPOLYLINE' && current.vertices && current.vertices.length) {
+          current.vertices[current.vertices.length - 1].bulge = parseFloat(v);
+        } else if (isVertexContext) {
+          polylineVertices[polylineVertices.length - 1].bulge = parseFloat(v);
+        }
+        break;
+      case 43:
+        if (current.type === 'INSERT') current.zscale = parseFloat(v);
+        break;
       case 50:
-        if (current.type === 'TEXT') {
+        if (current.type === 'TEXT' || current.type === 'INSERT') {
           current.rotation = parseFloat(v);
         } else {
           current.startAngle = parseFloat(v);
         }
         break;
       case 51: current.endAngle = parseFloat(v); break;
-      case 70: // closed flag for LWPOLYLINE
-        if (current.type === 'LWPOLYLINE') {
+      case 70: // closed flag for LWPOLYLINE / POLYLINE flags (bit 0 = closed)
+        if (current.type === 'LWPOLYLINE' || current.type === 'POLYLINE') {
           current.closed = (parseInt(v, 10) & 1) === 1;
         }
         break;
+      case 71:
+        // MTEXT attach point (1..9: top-left ... bottom-right)
+        if (current.type === 'MTEXT') current.attach = parseInt(v, 10);
+        break;
       case 72:
-        // TEXT horizontal alignment (0=left,1=center,2=right,...)
+        // TEXT horizontal alignment (0=left,1=center,2=right,3=aligned,4=middle,5=fit)
         if (current.type === 'TEXT') current.halign = parseInt(v, 10);
         break;
       case 73:
+        // TEXT vertical alignment (0=baseline,1=bottom,2=middle,3=top)
         if (current.type === 'TEXT') current.valign = parseInt(v, 10);
         break;
     }
   }
 
+  finalizeBlock();
   finalizeCurrent();
   finalizeLayer();
 
+  // INSERT-ek expandálása: a blokkok geometriáját a beillesztési pozícióba/rotációba/skálába
+  // transzformálva egy lapos entities tömbbe rendezzük. A renderer így nem ismer INSERT-et.
+  // Egyenetlen skálánál a kör/ív ellipszissé válna - itt a maximális abszolút skálát használjuk
+  // a sugárhoz; ez egyszerűsítés, de a tipikus uniform-skálás INSERT-eknél pontos.
+  let insertCount = 0;
+  const expandInserts = (list, depth) => {
+    if (depth > 8) return []; // körkörös vagy túl mély hivatkozás elleni védelem
+    const out = [];
+    for (const e of list) {
+      if (e.type !== 'INSERT') { out.push(e); continue; }
+      insertCount++;
+      const blk = blocks[e.name];
+      if (!blk) continue;
+      const childEntities = expandInserts(blk.entities, depth + 1);
+      const rot = (e.rotation || 0) * Math.PI / 180;
+      const cosR = Math.cos(rot), sinR = Math.sin(rot);
+      const sx = e.xscale != null ? e.xscale : 1;
+      const sy = e.yscale != null ? e.yscale : 1;
+      const tx = e.x1 || 0, ty = e.y1 || 0;
+      const bx = blk.baseX || 0, by = blk.baseY || 0;
+      const radiusScale = Math.max(Math.abs(sx), Math.abs(sy));
+      const txPt = (x, y) => {
+        const lx = (x - bx) * sx;
+        const ly = (y - by) * sy;
+        return { x: lx * cosR - ly * sinR + tx, y: lx * sinR + ly * cosR + ty };
+      };
+      for (const be of childEntities) {
+        const copy = { ...be };
+        // DXF "ByBlock" konvenció: a blokk '0' rétegre tett entitásai a beszúrás rétegét öröklik
+        if (!copy.layer || copy.layer === '0') copy.layer = e.layer || '0';
+        switch (be.type) {
+          case 'LINE': {
+            const a = txPt(be.x1, be.y1), b = txPt(be.x2, be.y2);
+            copy.x1 = a.x; copy.y1 = a.y; copy.x2 = b.x; copy.y2 = b.y;
+            break;
+          }
+          case 'CIRCLE': {
+            const c = txPt(be.x1, be.y1);
+            copy.x1 = c.x; copy.y1 = c.y;
+            copy.radius = (be.radius || 0) * radiusScale;
+            break;
+          }
+          case 'ARC': {
+            const c = txPt(be.x1, be.y1);
+            copy.x1 = c.x; copy.y1 = c.y;
+            copy.radius = (be.radius || 0) * radiusScale;
+            copy.startAngle = (be.startAngle || 0) + (e.rotation || 0);
+            copy.endAngle = (be.endAngle || 0) + (e.rotation || 0);
+            break;
+          }
+          case 'POINT': {
+            const p = txPt(be.x1 || 0, be.y1 || 0);
+            copy.x1 = p.x; copy.y1 = p.y;
+            break;
+          }
+          case 'TEXT':
+          case 'MTEXT': {
+            const p = txPt(be.x1 || 0, be.y1 || 0);
+            copy.x1 = p.x; copy.y1 = p.y;
+            copy.height = (be.height || 2.5) * radiusScale;
+            copy.rotation = (be.rotation || 0) + (e.rotation || 0);
+            break;
+          }
+          case 'LWPOLYLINE':
+          case 'POLYLINE': {
+            copy.vertices = (be.vertices || []).map(vv => {
+              const p = txPt(vv.x, vv.y);
+              // bulge előjele tükröződik, ha a skála invertál
+              const bulgeSign = (sx * sy < 0) ? -1 : 1;
+              return { x: p.x, y: p.y, bulge: vv.bulge != null ? vv.bulge * bulgeSign : undefined };
+            });
+            break;
+          }
+        }
+        out.push(copy);
+      }
+    }
+    return out;
+  };
+  const expandedEntities = expandInserts(entities, 0);
+
   // Ha az entitás olyan rétegre hivatkozik, ami nincs definiálva, hozzunk létre default rétegeket.
-  for (const e of entities) {
+  for (const e of expandedEntities) {
     if (e.layer && !layers[e.layer]) {
       layers[e.layer] = { name: e.layer, colorIndex: 7, color: null };
     }
@@ -1481,7 +1637,7 @@ function parseDxf(text) {
     layers['0'] = { name: '0', colorIndex: 7, color: null };
   }
 
-  return { entities, layers, skipped };
+  return { entities: expandedEntities, layers, skipped, insertCount, blockCount: Object.keys(blocks).length };
 }
 
 /* =========================================================
@@ -1627,7 +1783,10 @@ function render() {
       }
       case 'ARC': {
         const c = worldToScreen(e.x1, e.y1);
-        // DXF szögek fokban, CCW; canvas Y tükrözve
+        // DXF szögek fokban, CCW (Y felfelé). Canvas Y lefelé pozitív, ezért
+        // a vetített arc CCW->CW-vé válik. A start/end paramétereket negáljuk
+        // ÉS megcseréljük, hogy az alapból CCW-ben rajzoló ctx.arc visszaadja
+        // az eredeti DXF irányt és tartományt.
         const start = -((e.endAngle || 0) * Math.PI / 180);
         const end = -((e.startAngle || 0) * Math.PI / 180);
         ctx.arc(c.x, c.y, e.radius * view.scale, start, end);
@@ -1643,13 +1802,7 @@ function render() {
       case 'LWPOLYLINE':
       case 'POLYLINE': {
         if (!e.vertices || e.vertices.length === 0) break;
-        const first = worldToScreen(e.vertices[0].x, e.vertices[0].y);
-        ctx.moveTo(first.x, first.y);
-        for (let i = 1; i < e.vertices.length; i++) {
-          const p = worldToScreen(e.vertices[i].x, e.vertices[i].y);
-          ctx.lineTo(p.x, p.y);
-        }
-        if (e.closed) ctx.closePath();
+        drawPolylinePath(e.vertices, e.closed);
         ctx.stroke();
         break;
       }
@@ -1662,19 +1815,19 @@ function render() {
         if (fontHeight < 5) break;
         ctx.save();
         ctx.font = `${fontHeight}px 'JetBrains Mono', monospace`;
-        // Vízszintes igazítás (TEXT esetén)
-        let textAlign = 'left';
-        if (e.type === 'TEXT' && e.halign === 1) textAlign = 'center';
-        else if (e.type === 'TEXT' && e.halign === 2) textAlign = 'right';
-        ctx.textAlign = textAlign;
-        ctx.textBaseline = 'alphabetic';
-        // Forgatás (TEXT, fokban; canvas Y tükrözött, ezért negálva)
+
+        // Igazítás meghatározása: TEXT 72/73, MTEXT 71 (attach point 1..9)
+        const align = computeTextAlignment(e);
+        ctx.textAlign = align.textAlign;
+        ctx.textBaseline = align.textBaseline;
+
+        // Forgatás (fokban; canvas Y tükrözött, ezért negálva)
         if (e.rotation) {
           ctx.translate(p.x, p.y);
           ctx.rotate(-e.rotation * Math.PI / 180);
-          drawMultilineText(e.text, 0, 0, fontHeight, e.type === 'MTEXT');
+          drawMultilineText(e.text, 0, 0, fontHeight, e.type === 'MTEXT', align);
         } else {
-          drawMultilineText(e.text, p.x, p.y, fontHeight, e.type === 'MTEXT');
+          drawMultilineText(e.text, p.x, p.y, fontHeight, e.type === 'MTEXT', align);
         }
         ctx.restore();
         break;
@@ -1683,7 +1836,80 @@ function render() {
   }
 }
 
-function drawMultilineText(text, x, y, fontHeight, isMText) {
+// Polyline rajzolás bulge-val: ha egy vertex bulge értéke nem 0, ívet rajzolunk
+// a következő vertex-ig az ív-tan(theta/4) konvenció szerint.
+function drawPolylinePath(vertices, closed) {
+  const first = worldToScreen(vertices[0].x, vertices[0].y);
+  ctx.moveTo(first.x, first.y);
+  const segs = closed ? vertices.length : vertices.length - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    const bulge = a.bulge;
+    if (bulge && Math.abs(bulge) > 1e-9) {
+      drawBulgeArc(a, b, bulge);
+    } else {
+      const p = worldToScreen(b.x, b.y);
+      ctx.lineTo(p.x, p.y);
+    }
+  }
+  if (closed) ctx.closePath();
+}
+
+// Bulge ív: bulge = tan(theta/4), ahol theta a húrhoz tartozó középponti szög.
+// Pozitív bulge = CCW világkoordinátában (Y felfelé).
+function drawBulgeArc(p1, p2, bulge) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const chord = Math.hypot(dx, dy);
+  if (chord === 0) {
+    const p = worldToScreen(p2.x, p2.y);
+    ctx.lineTo(p.x, p.y);
+    return;
+  }
+  const theta = 4 * Math.atan(bulge);          // előjeles középponti szög
+  const halfT = theta / 2;
+  const radius = chord / (2 * Math.sin(halfT)); // előjeles
+  const d = (chord / 2) / Math.tan(halfT);     // előjeles merőleges távolság a húr-középponttól
+  // Húrra merőleges egységvektor (bal oldal pozitív bulge esetén)
+  const px = -dy / chord, py = dx / chord;
+  const cx = (p1.x + p2.x) / 2 + px * d;
+  const cy = (p1.y + p2.y) / 2 + py * d;
+  const r = Math.abs(radius);
+  const startWorld = Math.atan2(p1.y - cy, p1.x - cx);
+  const endWorld = Math.atan2(p2.y - cy, p2.x - cx);
+  // Canvas: Y tükrözve, így a világbeli CCW képernyőn CW-ként mehet végig.
+  const cs = worldToScreen(cx, cy);
+  ctx.arc(cs.x, cs.y, r * view.scale, -startWorld, -endWorld, bulge > 0);
+}
+
+// TEXT/MTEXT igazítás kiszámítása: visszaadja a Canvas-szintű textAlign + textBaseline
+// értéket, plusz egy lineAlign-t a többsoros szövegnek (jobb/közép/bal vagy felső/közép/alsó
+// origó). Az MTEXT attach point (kód 71) 1..9, a 'felső sor' a referencia.
+function computeTextAlignment(e) {
+  // alapértelmezett: bal-alaphelyzet
+  let textAlign = 'left', textBaseline = 'alphabetic', vAnchor = 'top';
+  if (e.type === 'MTEXT') {
+    const a = e.attach || 1; // alap: top-left
+    if (a === 1 || a === 4 || a === 7) textAlign = 'left';
+    else if (a === 2 || a === 5 || a === 8) textAlign = 'center';
+    else if (a === 3 || a === 6 || a === 9) textAlign = 'right';
+    if (a >= 1 && a <= 3) { textBaseline = 'top'; vAnchor = 'top'; }
+    else if (a >= 4 && a <= 6) { textBaseline = 'middle'; vAnchor = 'middle'; }
+    else { textBaseline = 'alphabetic'; vAnchor = 'bottom'; }
+  } else { // TEXT
+    if (e.halign === 1 || e.halign === 4) textAlign = 'center';
+    else if (e.halign === 2) textAlign = 'right';
+    // valign 0=baseline, 1=bottom, 2=middle, 3=top
+    if (e.valign === 1) textBaseline = 'bottom';
+    else if (e.valign === 2) textBaseline = 'middle';
+    else if (e.valign === 3) textBaseline = 'top';
+    // halign 4 (middle) függőlegesen is középre tesz
+    if (e.halign === 4) textBaseline = 'middle';
+  }
+  return { textAlign, textBaseline, vAnchor };
+}
+
+function drawMultilineText(text, x, y, fontHeight, isMText, align) {
   // MTEXT-ben a \P sortörést jelent; egyszerű DXF formázó kódokat (\f, \H, stb.) eltávolítunk
   let cleaned = text;
   if (isMText) {
@@ -1693,8 +1919,16 @@ function drawMultilineText(text, x, y, fontHeight, isMText) {
       .replace(/[{}]/g, '');
   }
   const lines = cleaned.split(/\\P|\n/);
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x, y + i * fontHeight * 1.2);
+  const lineH = fontHeight * 1.2;
+  // Függőleges igazítás: a textBaseline-t az első sornál a kívánt vAnchor szerint értelmezzük.
+  // top: y..y+(n-1)h, middle: y körül szimmetrikus, bottom: y-(n-1)h..y
+  const n = lines.length;
+  const vAnchor = (align && align.vAnchor) || 'top';
+  let yOffset = 0;
+  if (vAnchor === 'middle') yOffset = -((n - 1) / 2) * lineH;
+  else if (vAnchor === 'bottom') yOffset = -(n - 1) * lineH;
+  for (let i = 0; i < n; i++) {
+    ctx.fillText(lines[i], x, y + yOffset + i * lineH);
   }
 }
 
