@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DXF Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Háttér - Deep Navy / Navy / Graphite */
+    --bg-deep: #0A0F14;        /* Háttér 1 */
+    --bg-navy: #0F1620;        /* Háttér 2 */
+    --bg-grid: #0F1620;
+    --surface-1: #141C26;      /* Felület 1 - Graphite */
+    --surface-2: #1B2430;      /* Felület 2 - Slate */
+    --surface-3: #222C3A;      /* Felület 3 - Light Slate */
+
+    /* Szöveg */
+    --text-primary: #E6EDF3;
+    --text-secondary: #A9B4C2;
+    --text-tertiary: #728091;
+    --text-disabled: #4A5563;
+
+    /* Accent - zöld */
+    --accent: #22D07D;
+    --accent-dark: #17965A;
+
+    /* Vonal színek a rajzhoz - narancs/sárga, mint a designban */
+    --line-orange: #FFB800;    /* Vonal - Narancs / Orange Line */
+    --line-amber: #FFB820;
+    --line-yellow: #FFD44D;    /* Vonal - Sárga / Yellow Line */
+    --line-warm: #FF8A00;
+
+    /* Rács */
+    --grid-line: rgba(120, 160, 200, 0.05);
+    --grid-line-major: rgba(120, 160, 200, 0.10);
+
+    /* Panel */
+    --panel: var(--surface-1);
+    --panel-border: #253040;   /* Elválasztó */
+
+    --warn: #FFB547;
+    --error: #FF5C5C;
+
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'JetBrains Mono', monospace;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background: var(--bg-deep);
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-deep);
+    z-index: 10;
+    gap: 24px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .brand h1 .dot {
+    color: var(--accent);
+    margin: 0 2px;
+  }
+
+  .brand .file-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
+  .brand .file-pill.empty {
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .header-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .header-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .header-btn.primary {
+    background: var(--accent);
+    color: var(--bg-deep);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .header-btn.primary:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: var(--text-primary);
+  }
+
+  .header-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+  }
+
+  /* ---------- Main canvas area ---------- */
+  main {
+    position: relative;
+    overflow: hidden;
+  }
+
+  #canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 20px 20px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 20px 20px,
+      linear-gradient(var(--grid-line-major) 1px, transparent 1px) 0 0 / 100px 100px,
+      linear-gradient(90deg, var(--grid-line-major) 1px, transparent 1px) 0 0 / 100px 100px,
+      var(--bg-grid);
+    cursor: grab;
+  }
+
+  #canvas:active { cursor: grabbing; }
+
+  /* ---------- Drop zone (initial state) ---------- */
+  .dropzone {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .dropzone.active {
+    pointer-events: auto;
+  }
+
+  .dropzone.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .drop-card {
+    text-align: center;
+    padding: 48px 56px;
+    border: 1px dashed var(--panel-border);
+    background: var(--surface-1);
+    max-width: 460px;
+    position: relative;
+    border-radius: 6px;
+  }
+
+  .drop-card::before,
+  .drop-card::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--accent);
+  }
+
+  .drop-card::before {
+    top: -1px; left: -1px;
+    border-right: none; border-bottom: none;
+  }
+
+  .drop-card::after {
+    bottom: -1px; right: -1px;
+    border-left: none; border-top: none;
+  }
+
+  .drop-card .corners {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .drop-card .corners::before,
+  .drop-card .corners::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--accent);
+  }
+
+  .drop-card .corners::before {
+    top: -1px; right: -1px;
+    border-left: none; border-bottom: none;
+  }
+
+  .drop-card .corners::after {
+    bottom: -1px; left: -1px;
+    border-right: none; border-top: none;
+  }
+
+  .drop-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(34, 208, 125, 0.1);
+    border: 1px solid rgba(34, 208, 125, 0.3);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  .drop-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+  }
+
+  .drop-card h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+    color: var(--text-primary);
+  }
+
+  .drop-card p {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .drop-card label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    pointer-events: auto;
+    border-radius: 4px;
+    font-family: var(--font-body);
+  }
+
+  .drop-card label:hover {
+    background: var(--accent-dark);
+    color: var(--text-primary);
+  }
+
+  .drop-card input[type="file"] {
+    display: none;
+  }
+
+  /* ---------- Info panel ---------- */
+  .info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    padding: 14px 16px;
+    min-width: 280px;
+    max-width: 320px;
+    font-size: 12px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .info-panel.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .info-toggle {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    text-align: left;
+    padding: 0 0 10px 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--panel-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: color 0.2s ease;
+  }
+
+  .info-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .info-toggle-chevron {
+    font-size: 12px;
+    transition: transform 0.25s ease;
+    color: var(--accent);
+  }
+
+  .info-panel.collapsed .info-toggle-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .info-panel.collapsed .info-toggle {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .info-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.25s ease;
+    max-height: 700px;
+    opacity: 1;
+  }
+
+  .info-panel.collapsed .info-body {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  /* ---------- Subsection (rétegek + entitások) ---------- */
+  .subsection {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .subsection.no-divider {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .entity-size-row {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .subsection-head,
+  .subsection-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0 0 6px 0;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    text-align: left;
+  }
+
+  /* Master réteg toggle (a fejlécben) */
+  .layer-master-toggle {
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 3px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .layer-master-toggle:hover {
+    color: var(--accent);
+    background: rgba(34, 208, 125, 0.08);
+  }
+
+  .layer-master-toggle svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  .layer-master-toggle .icon-off { display: none; }
+  .layer-master-toggle .icon-on  { display: block; }
+
+  .layer-master-toggle.all-hidden .icon-on  { display: none; }
+  .layer-master-toggle.all-hidden .icon-off { display: block; }
+  .layer-master-toggle.all-hidden { color: var(--text-disabled); }
+
+  /* Feliratok kapcsoló sor */
+  .text-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .text-toggle-row[hidden] { display: none; }
+
+  .text-toggle-row:hover {
+    background: var(--surface-2);
+  }
+
+  .text-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+  }
+
+  .text-toggle-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .text-toggle-label {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .text-toggle-count {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  .text-toggle-row.hidden .text-toggle-label,
+  .text-toggle-row.hidden .text-toggle-count,
+  .text-toggle-row.hidden .text-toggle-icon {
+    color: var(--text-disabled);
+  }
+
+  /* ---------- Color picker modal ---------- */
+  .color-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 20, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+  }
+
+  .color-modal-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .color-modal {
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 24px;
+    min-width: 360px;
+    max-width: 440px;
+    transform: translateY(8px);
+    transition: transform 0.25s ease;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+  }
+
+  .color-modal-backdrop.visible .color-modal {
+    transform: translateY(0);
+  }
+
+  .color-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .color-modal-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-secondary);
+  }
+
+  .color-modal-layer-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-left: 8px;
+  }
+
+  .color-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+  }
+
+  .color-modal-close:hover { color: var(--text-primary); }
+
+  .color-modal-close svg { width: 16px; height: 16px; }
+
+  .color-palette {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+
+  .color-cell {
+    aspect-ratio: 1;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0;
+    background-clip: padding-box;
+    transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .color-cell:hover {
+    transform: scale(1.15);
+    border-color: var(--text-primary);
+    z-index: 1;
+  }
+
+  .color-cell.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(34, 208, 125, 0.4);
+  }
+
+  .color-modal-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .color-modal-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .color-modal-custom label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .color-modal-custom input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  .color-modal-custom input[type="text"] {
+    flex: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .color-modal-custom input[type="text"]:focus {
+    border-color: var(--accent);
+  }
+
+  .color-modal-reset {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 11px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .color-modal-reset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* A swatch most kattintható */
+  .layer-swatch {
+    cursor: pointer;
+  }
+  .layer-swatch:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(34, 208, 125, 0.2);
+  }
+
+  .subsection-toggle {
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .subsection-toggle:hover {
+    color: var(--accent);
+  }
+
+  .subsection-title {
+    flex: 1;
+    color: var(--text-tertiary);
+  }
+
+  .subsection-toggle:hover .subsection-title {
+    color: var(--accent);
+  }
+
+  .subsection-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--text-primary);
+  }
+
+  .subsection-count.val-accent {
+    color: var(--accent);
+  }
+
+  .subsection-chevron {
+    font-size: 11px;
+    color: var(--accent);
+    transition: transform 0.25s ease;
+  }
+
+  .subsection-toggle.collapsed .subsection-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .subsection-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    max-height: 500px;
+    opacity: 1;
+    margin-top: 4px;
+  }
+
+  .subsection-toggle.collapsed + .subsection-body {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+  }
+
+  /* ---------- Entity groups ---------- */
+  .entity-group {
+    margin-top: 10px;
+  }
+
+  .entity-group:first-child {
+    margin-top: 0;
+  }
+
+  .entity-group:empty,
+  .entity-group.hidden {
+    display: none;
+  }
+
+  .entity-group-title {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+
+  .entity-group-title.warn {
+    color: var(--warn);
+  }
+
+  .entity-group-note {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .entity-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .entity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    padding: 3px 0;
+  }
+
+  .entity-row .entity-type {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .entity-row .entity-count {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .entity-row.warn .entity-count {
+    color: var(--warn);
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+
+  .info-row span:last-child {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .info-row .val-accent { color: var(--accent); }
+
+  .layer-list {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 240px;
+    overflow-y: auto;
+    margin-left: -4px;
+    margin-right: -4px;
+  }
+
+  .layer-list::-webkit-scrollbar { width: 6px; }
+  .layer-list::-webkit-scrollbar-track { background: transparent; }
+  .layer-list::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+
+  .layer-list:empty {
+    display: none;
+  }
+
+  .layer-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .layer-item:hover {
+    background: var(--surface-2);
+  }
+
+  .layer-swatch {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+  }
+
+  .layer-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+    font-weight: 500;
+  }
+
+  .layer-visibility {
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.15s ease, transform 0.1s ease;
+    border-radius: 3px;
+  }
+
+  .layer-visibility:hover {
+    color: var(--accent);
+    background: rgba(34, 208, 125, 0.08);
+  }
+
+  .layer-visibility:active {
+    transform: scale(0.92);
+  }
+
+  .layer-visibility svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  /* alapból az "off" ikon rejtve, "on" látszik */
+  .layer-visibility .icon-off { display: none; }
+  .layer-visibility .icon-on  { display: block; }
+
+  .layer-item.hidden .layer-visibility .icon-on  { display: none; }
+  .layer-item.hidden .layer-visibility .icon-off { display: block; }
+  .layer-item.hidden .layer-visibility { color: var(--text-disabled); }
+
+  .layer-item.hidden .layer-name,
+  .layer-item.hidden .layer-count {
+    color: var(--text-disabled);
+  }
+
+  .layer-item.hidden .layer-swatch {
+    opacity: 0.25;
+    filter: grayscale(0.8);
+  }
+
+  .layer-count {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    transition: color 0.2s ease;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 4px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .controls button {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    padding: 8px 14px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-radius: 4px;
+  }
+
+  .controls button:hover {
+    background: var(--surface-2);
+    color: var(--accent);
+  }
+
+  /* ---------- Footer ---------- */
+  footer {
+    padding: 10px 24px;
+    border-top: 1px solid var(--panel-border);
+    background: var(--bg-deep);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  footer .brand-mini {
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+  }
+
+  footer .brand-mini .dot { color: var(--accent); margin: 0 1px; }
+
+  footer .coords {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: 11px;
+  }
+
+  /* ---------- Dropzone hover state ---------- */
+  body.dragover .drop-card {
+    border-color: var(--accent);
+    background: rgba(34, 208, 125, 0.04);
+  }
+
+  /* ---------- Error state ---------- */
+  .error-toast {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--error);
+    color: white;
+    padding: 10px 22px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: transform 0.4s ease;
+    z-index: 100;
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .error-toast.visible {
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>DXF<span class="dot">·</span>VIEWER</h1>
+    <div class="file-pill empty" id="file-pill">Nincs fájl betöltve</div>
+  </div>
+  <div class="header-actions">
+    <button class="header-btn primary" id="header-open" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/>
+      </svg>
+      Megnyitás
+    </button>
+  </div>
+</header>
+
+<main>
+  <canvas id="canvas"></canvas>
+
+  <div class="dropzone active" id="dropzone">
+    <div class="drop-card">
+      <span class="corners"></span>
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h2>DXF fájl betöltése</h2>
+      <p>Húzd ide a fájlt, vagy válassz egyet a tallózással.<br/>Támogatott: ASCII DXF (LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE, POINT)</p>
+      <label for="file-input">Fájl tallózása</label>
+      <input type="file" id="file-input" accept=".dxf" />
+    </div>
+  </div>
+
+  <div class="info-panel" id="info-panel">
+    <button class="info-toggle" id="info-toggle" aria-expanded="true" aria-controls="info-body">
+      <span class="info-toggle-label">Rajz adatok</span>
+      <span class="info-toggle-chevron" aria-hidden="true">▾</span>
+    </button>
+    <div class="info-body" id="info-body">
+      <div class="subsection no-divider">
+        <div class="subsection-head">
+          <button class="layer-master-toggle" id="layer-master-toggle" type="button" aria-label="Összes réteg ki/bekapcsolása" title="Összes réteg ki/bekapcsolása">
+            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+          <span class="subsection-title">Rétegek</span>
+          <span class="subsection-count" id="info-layers">0</span>
+        </div>
+        <div class="layer-list" id="layer-list"></div>
+
+        <div class="text-toggle-row" id="text-toggle-row" hidden>
+          <button class="layer-visibility text-master" id="text-master-toggle" type="button" aria-pressed="false" aria-label="Feliratok ki/bekapcsolása" title="Feliratok ki/bekapcsolása">
+            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+          <span class="text-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          </span>
+          <span class="text-toggle-label">Feliratok</span>
+          <span class="text-toggle-count" id="text-toggle-count">0</span>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <button class="subsection-toggle collapsed" id="entities-toggle" aria-expanded="false" aria-controls="entities-body">
+          <span class="subsection-title">Entitások</span>
+          <span class="subsection-count val-accent" id="info-entities">0</span>
+          <span class="subsection-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="subsection-body" id="entities-body">
+          <div class="entity-group" id="entity-group-rendered">
+            <h5 class="entity-group-title">Megjelenítve</h5>
+            <div class="entity-rows" id="entity-rows-rendered"></div>
+          </div>
+          <div class="entity-group" id="entity-group-skipped">
+            <h5 class="entity-group-title warn">Nem támogatott</h5>
+            <p class="entity-group-note">A megjelenítő nem rajzolja ki, de a fájlban benne vannak.</p>
+            <div class="entity-rows" id="entity-rows-skipped"></div>
+          </div>
+          <div class="info-row entity-size-row"><span>Fájlméret</span><span id="info-size">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button id="btn-fit">Illesztés</button>
+    <button id="btn-zoom-in">Zoom +</button>
+    <button id="btn-zoom-out">Zoom −</button>
+    <button id="btn-reset">Új fájl</button>
+  </div>
+
+  <div class="error-toast" id="error-toast"></div>
+</main>
+
+<div class="color-modal-backdrop" id="color-modal-backdrop" hidden>
+  <div class="color-modal" role="dialog" aria-labelledby="color-modal-title">
+    <div class="color-modal-header">
+      <div>
+        <span class="color-modal-title" id="color-modal-title">Réteg színe</span>
+        <span class="color-modal-layer-name" id="color-modal-layer-name"></span>
+      </div>
+      <button class="color-modal-close" id="color-modal-close" type="button" aria-label="Bezárás">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+        </svg>
+      </button>
+    </div>
+    <div class="color-palette" id="color-palette"></div>
+    <div class="color-modal-footer">
+      <div class="color-modal-custom">
+        <label for="color-custom-picker">Egyéni:</label>
+        <input type="color" id="color-custom-picker" value="#FFB820" />
+        <input type="text" id="color-custom-hex" value="#FFB820" maxlength="7" spellcheck="false" />
+      </div>
+      <button class="color-modal-reset" id="color-modal-reset" type="button">Alapértelmezett</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="brand-mini">DXF<span class="dot">·</span>VIEWER  v1.0.0</div>
+  <div class="coords" id="coords">X: 0.00  Y: 0.00  ·  ZOOM: 1.00x</div>
+</footer>
+
+<script>
+// SVG ikonok - globálisan elérhetővé téve a script tetején (TDZ elkerülésére)
+const EYE_ICON_ON = `
+  <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>`;
+const EYE_ICON_OFF = `
+  <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3l18 18"/>
+    <path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/>
+    <path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/>
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+  </svg>`;
+
+function decodeDxfUnicode(s) {
+  // DXF \U+XXXX escape szekvenciák feloldása (pl. réteg- vagy szövegnevekben)
+  if (!s || s.indexOf('\\U+') === -1) return s;
+  return s.replace(/\\U\+([0-9A-Fa-f]{4})/g, (_, hex) =>
+    String.fromCharCode(parseInt(hex, 16))
+  );
+}
+
+/* =========================================================
+   ACI (AutoCAD Color Index) — a klasszikus 256 színű paletta
+   ========================================================= */
+const ACI_COLORS = [
+  // 0: ByBlock (fekete placeholder, ritkán használt direktben)
+  '#000000',
+  // 1-9: alap színek
+  '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF', '#414141', '#808080',
+  // 10-249: a teljes színpaletta — fokozatosan generálva (HSL alapú közelítés az AutoCAD palettához)
+];
+
+// Az AutoCAD ACI palettát a HSL térben jól lehet közelíteni.
+// A 10-249 közötti tartományban hue szerint 24 kategória, mindegyikben 10 árnyalat (világos→sötét).
+(function buildAciPalette() {
+  // Pontos első 9 már megvan. Most a 10-249 tartomány.
+  const hues = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345];
+  // 10 fényesség szint kategóriánként
+  const lightnessSet = [
+    { l: 50, s: 100 }, // teljes telített
+    { l: 39, s: 100 },
+    { l: 75, s: 100 }, // világos pasztell
+    { l: 58, s: 100 },
+    { l: 50, s: 50 },  // fakóbb
+    { l: 39, s: 50 },
+    { l: 75, s: 50 },
+    { l: 58, s: 50 },
+    { l: 30, s: 100 }, // sötét
+    { l: 23, s: 100 },
+  ];
+
+  function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+      const c = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return Math.round(c * 255).toString(16).padStart(2, '0');
+    };
+    return '#' + f(0) + f(8) + f(4);
+  }
+
+  for (const h of hues) {
+    for (const { l, s } of lightnessSet) {
+      ACI_COLORS.push(hslToHex(h, s, l));
+    }
+  }
+  // 250-255: szürkeárnyalatok
+  const grays = [33, 79, 119, 158, 198, 232];
+  for (const g of grays) {
+    const hex = g.toString(16).padStart(2, '0');
+    ACI_COLORS.push('#' + hex + hex + hex);
+  }
+})();
+
+function aciToColor(aci) {
+  if (aci === undefined || aci === null) return null;
+  if (aci === 0) return null;   // ByBlock
+  if (aci === 256) return null; // ByLayer
+  if (aci === 7) return '#FFB820'; // 7 = white/black, designnak megfelelően narancsra mappelve
+  if (aci >= 1 && aci < ACI_COLORS.length) return ACI_COLORS[aci];
+  return null;
+}
+
+/* =========================================================
+   DXF PARSER — ASCII DXF, alapvető entitások + rétegek színei
+   ========================================================= */
+function parseDxf(text) {
+  // DXF fájlok pár soros formátumban tárolnak adatot:
+  // [group code]\n[value]\n[group code]\n[value]\n...
+  const lines = text.split(/\r\n|\r|\n/);
+  const pairs = [];
+  for (let i = 0; i < lines.length - 1; i += 2) {
+    const code = parseInt(lines[i].trim(), 10);
+    const value = lines[i + 1];
+    if (Number.isNaN(code)) continue;
+    pairs.push({ code, value: value !== undefined ? value : '' });
+  }
+
+  const entities = [];
+  const layers = {}; // név -> { name, colorIndex, color }
+  const skipped = {}; // típus -> darabszám (támogatott szekciókban talált, de nem renderelt)
+
+  // Mit tudunk renderelni?
+  const RENDERABLE = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'POLYLINE', 'TEXT', 'MTEXT']);
+  const TEXT_TYPES = new Set(['TEXT', 'MTEXT']);
+
+  // Két szekciót dolgozunk fel: TABLES (rétegek) és ENTITIES (rajzelemek)
+  let section = null; // 'TABLES' | 'ENTITIES' | null
+  let inLayerTable = false;
+  let currentLayer = null;
+
+  let current = null;
+  let polylineVertices = null;
+
+  const finalizeCurrent = () => {
+    if (!current) return;
+    if (current.type === 'POLYLINE' && polylineVertices) {
+      current.vertices = polylineVertices;
+    }
+    entities.push(current);
+    current = null;
+    polylineVertices = null;
+  };
+
+  const finalizeLayer = () => {
+    if (!currentLayer) return;
+    if (currentLayer.name) {
+      layers[currentLayer.name] = {
+        name: currentLayer.name,
+        colorIndex: currentLayer.colorIndex !== undefined ? currentLayer.colorIndex : 7,
+        color: aciToColor(currentLayer.colorIndex),
+      };
+    }
+    currentLayer = null;
+  };
+
+  for (let i = 0; i < pairs.length; i++) {
+    const { code, value } = pairs[i];
+    const v = value.trim();
+
+    // --- Szekció kezelés ---
+    if (code === 0) {
+      if (v === 'SECTION') {
+        const next = pairs[i + 1];
+        if (next && next.code === 2) {
+          const name = next.value.trim();
+          if (name === 'TABLES') section = 'TABLES';
+          else if (name === 'ENTITIES') section = 'ENTITIES';
+          else section = null;
+        }
+        continue;
+      }
+      if (v === 'ENDSEC') {
+        finalizeCurrent();
+        finalizeLayer();
+        section = null;
+        inLayerTable = false;
+        continue;
+      }
+
+      // --- TABLES szekción belül: layer table ---
+      if (section === 'TABLES') {
+        if (v === 'TABLE') {
+          // a következő (code 2) érték a tábla típusa
+          const next = pairs[i + 1];
+          if (next && next.code === 2 && next.value.trim() === 'LAYER') {
+            inLayerTable = true;
+          }
+          continue;
+        }
+        if (v === 'ENDTAB') {
+          finalizeLayer();
+          inLayerTable = false;
+          continue;
+        }
+        if (inLayerTable && v === 'LAYER') {
+          finalizeLayer();
+          currentLayer = { name: null, colorIndex: 7 };
+          continue;
+        }
+        continue;
+      }
+
+      // --- ENTITIES szekción belül ---
+      if (section !== 'ENTITIES') continue;
+
+      // Polyline alentitás: VERTEX
+      if (v === 'VERTEX' && current && current.type === 'POLYLINE') {
+        polylineVertices = polylineVertices || [];
+        polylineVertices.push({ x: 0, y: 0 });
+        continue;
+      }
+      if (v === 'SEQEND') continue;
+
+      // Új főentitás
+      finalizeCurrent();
+      if (RENDERABLE.has(v)) {
+        current = { type: v, layer: '0' };
+        if (v === 'POLYLINE') polylineVertices = [];
+      } else {
+        // Nem renderelhető entitás - csak számoljuk és átugorjuk
+        skipped[v] = (skipped[v] || 0) + 1;
+        current = null;
+        polylineVertices = null;
+      }
+      continue;
+    }
+
+    // --- Group code-ok feldolgozása szekciónként ---
+
+    // Layer tábla mezői
+    if (section === 'TABLES' && inLayerTable && currentLayer) {
+      if (code === 2) currentLayer.name = decodeDxfUnicode(v);
+      else if (code === 62) currentLayer.colorIndex = parseInt(v, 10);
+      // a 62 lehet negatív is (kikapcsolt réteg) - abszolút értéke a szín
+      continue;
+    }
+
+    // Entitás mezői
+    if (section !== 'ENTITIES' || !current) continue;
+
+    // Ha éppen polyline vertex-eket olvasunk, oda kerülnek a koordináták
+    const isVertexContext = current.type === 'POLYLINE' && polylineVertices && polylineVertices.length > 0;
+
+    switch (code) {
+      case 8: // layer
+        current.layer = decodeDxfUnicode(v);
+        break;
+      case 62: // entity color override (ACI)
+        current.colorIndex = parseInt(v, 10);
+        break;
+      case 10: // X
+        if (isVertexContext) polylineVertices[polylineVertices.length - 1].x = parseFloat(v);
+        else if (current.type === 'LWPOLYLINE') {
+          current.vertices = current.vertices || [];
+          current.vertices.push({ x: parseFloat(v), y: 0 });
+        } else current.x1 = parseFloat(v);
+        break;
+      case 20: // Y
+        if (isVertexContext) polylineVertices[polylineVertices.length - 1].y = parseFloat(v);
+        else if (current.type === 'LWPOLYLINE' && current.vertices && current.vertices.length) {
+          current.vertices[current.vertices.length - 1].y = parseFloat(v);
+        } else current.y1 = parseFloat(v);
+        break;
+      case 1: // text content (TEXT, MTEXT)
+        if (current.type === 'TEXT' || current.type === 'MTEXT') {
+          // MTEXT-nél több 1-es és 3-as kód is lehet, ezeket konkatenáljuk
+          current.text = (current.text || '') + decodeDxfUnicode(v);
+        }
+        break;
+      case 3: // MTEXT folytatás
+        if (current.type === 'MTEXT') {
+          current.text = (current.text || '') + decodeDxfUnicode(v);
+        }
+        break;
+      case 11: current.x2 = parseFloat(v); break;
+      case 21: current.y2 = parseFloat(v); break;
+      case 40:
+        if (current.type === 'TEXT' || current.type === 'MTEXT') {
+          current.height = parseFloat(v);
+        } else {
+          current.radius = parseFloat(v);
+        }
+        break;
+      case 50:
+        if (current.type === 'TEXT') {
+          current.rotation = parseFloat(v);
+        } else {
+          current.startAngle = parseFloat(v);
+        }
+        break;
+      case 51: current.endAngle = parseFloat(v); break;
+      case 70: // closed flag for LWPOLYLINE
+        if (current.type === 'LWPOLYLINE') {
+          current.closed = (parseInt(v, 10) & 1) === 1;
+        }
+        break;
+      case 72:
+        // TEXT horizontal alignment (0=left,1=center,2=right,...)
+        if (current.type === 'TEXT') current.halign = parseInt(v, 10);
+        break;
+      case 73:
+        if (current.type === 'TEXT') current.valign = parseInt(v, 10);
+        break;
+    }
+  }
+
+  finalizeCurrent();
+  finalizeLayer();
+
+  // Ha az entitás olyan rétegre hivatkozik, ami nincs definiálva, hozzunk létre default rétegeket.
+  for (const e of entities) {
+    if (e.layer && !layers[e.layer]) {
+      layers[e.layer] = { name: e.layer, colorIndex: 7, color: null };
+    }
+  }
+  // Mindig legyen egy '0' réteg
+  if (!layers['0']) {
+    layers['0'] = { name: '0', colorIndex: 7, color: null };
+  }
+
+  return { entities, layers, skipped };
+}
+
+/* =========================================================
+   RENDERER — Canvas 2D
+   ========================================================= */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let dxfData = null;
+let bounds = null;
+let view = { x: 0, y: 0, scale: 1 };
+const hiddenLayers = new Set(); // kikapcsolt rétegek nevei
+const layerColorOverrides = {}; // user által módosított rétegszínek: name -> hex
+let textsVisible = true; // globális felirat-láthatóság
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (dxfData) render();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function computeBounds(entities) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const expand = (x, y) => {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  };
+
+  for (const e of entities) {
+    switch (e.type) {
+      case 'LINE':
+        expand(e.x1, e.y1); expand(e.x2, e.y2); break;
+      case 'CIRCLE':
+        expand(e.x1 - e.radius, e.y1 - e.radius);
+        expand(e.x1 + e.radius, e.y1 + e.radius); break;
+      case 'ARC':
+        expand(e.x1 - e.radius, e.y1 - e.radius);
+        expand(e.x1 + e.radius, e.y1 + e.radius); break;
+      case 'POINT':
+        expand(e.x1, e.y1); break;
+      case 'LWPOLYLINE':
+      case 'POLYLINE':
+        if (e.vertices) e.vertices.forEach(v => expand(v.x, v.y));
+        break;
+    }
+  }
+
+  if (!isFinite(minX)) return null;
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+}
+
+function fitToView() {
+  if (!bounds) return;
+  const rect = canvas.getBoundingClientRect();
+  const padding = 60;
+  const sx = (rect.width - padding * 2) / (bounds.w || 1);
+  const sy = (rect.height - padding * 2) / (bounds.h || 1);
+  view.scale = Math.min(sx, sy);
+  // középre igazítás (DXF Y felfelé pozitív, képernyőn lefelé)
+  view.x = rect.width / 2 - (bounds.minX + bounds.w / 2) * view.scale;
+  view.y = rect.height / 2 + (bounds.minY + bounds.h / 2) * view.scale;
+  render();
+}
+
+function worldToScreen(x, y) {
+  return {
+    x: x * view.scale + view.x,
+    y: -y * view.scale + view.y,
+  };
+}
+
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - view.x) / view.scale,
+    y: -(sy - view.y) / view.scale,
+  };
+}
+
+function getEntityColor(e) {
+  // Prioritás: layer color override (user által módosított) > entitás saját színe (62) > réteg eredeti színe > default
+  const layerName = e.layer || '0';
+  if (layerColorOverrides[layerName]) {
+    return layerColorOverrides[layerName];
+  }
+  if (e.colorIndex !== undefined && e.colorIndex !== 256) {
+    const c = aciToColor(e.colorIndex);
+    if (c) return c;
+  }
+  if (dxfData && dxfData.layers && dxfData.layers[layerName]) {
+    const layerColor = dxfData.layers[layerName].color;
+    if (layerColor) return layerColor;
+  }
+  return '#FFB820'; // default narancs szín (designnak megfelelően)
+}
+
+function getLayerDisplayColor(name) {
+  // A panelen mutatott szín (override > eredeti > default)
+  if (layerColorOverrides[name]) return layerColorOverrides[name];
+  if (dxfData && dxfData.layers && dxfData.layers[name] && dxfData.layers[name].color) {
+    return dxfData.layers[name].color;
+  }
+  return '#FFB820';
+}
+
+function render() {
+  const rect = canvas.getBoundingClientRect();
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  if (!dxfData) return;
+
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (const e of dxfData.entities) {
+    if (hiddenLayers.has(e.layer || '0')) continue;
+    // Feliratok globális elrejtése
+    if (!textsVisible && (e.type === 'TEXT' || e.type === 'MTEXT')) continue;
+    const color = getEntityColor(e);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    switch (e.type) {
+      case 'LINE': {
+        const a = worldToScreen(e.x1, e.y1);
+        const b = worldToScreen(e.x2, e.y2);
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        break;
+      }
+      case 'CIRCLE': {
+        const c = worldToScreen(e.x1, e.y1);
+        ctx.arc(c.x, c.y, e.radius * view.scale, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      }
+      case 'ARC': {
+        const c = worldToScreen(e.x1, e.y1);
+        // DXF szögek fokban, CCW; canvas Y tükrözve
+        const start = -((e.endAngle || 0) * Math.PI / 180);
+        const end = -((e.startAngle || 0) * Math.PI / 180);
+        ctx.arc(c.x, c.y, e.radius * view.scale, start, end);
+        ctx.stroke();
+        break;
+      }
+      case 'POINT': {
+        const p = worldToScreen(e.x1, e.y1);
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case 'LWPOLYLINE':
+      case 'POLYLINE': {
+        if (!e.vertices || e.vertices.length === 0) break;
+        const first = worldToScreen(e.vertices[0].x, e.vertices[0].y);
+        ctx.moveTo(first.x, first.y);
+        for (let i = 1; i < e.vertices.length; i++) {
+          const p = worldToScreen(e.vertices[i].x, e.vertices[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        if (e.closed) ctx.closePath();
+        ctx.stroke();
+        break;
+      }
+      case 'TEXT':
+      case 'MTEXT': {
+        if (!e.text) break;
+        const p = worldToScreen(e.x1 || 0, e.y1 || 0);
+        const fontHeight = Math.max(2, (e.height || 2.5) * view.scale);
+        // Túl kicsi szöveget ne renderelj (átlátható zoom-szinten)
+        if (fontHeight < 5) break;
+        ctx.save();
+        ctx.font = `${fontHeight}px 'JetBrains Mono', monospace`;
+        // Vízszintes igazítás (TEXT esetén)
+        let textAlign = 'left';
+        if (e.type === 'TEXT' && e.halign === 1) textAlign = 'center';
+        else if (e.type === 'TEXT' && e.halign === 2) textAlign = 'right';
+        ctx.textAlign = textAlign;
+        ctx.textBaseline = 'alphabetic';
+        // Forgatás (TEXT, fokban; canvas Y tükrözött, ezért negálva)
+        if (e.rotation) {
+          ctx.translate(p.x, p.y);
+          ctx.rotate(-e.rotation * Math.PI / 180);
+          drawMultilineText(e.text, 0, 0, fontHeight, e.type === 'MTEXT');
+        } else {
+          drawMultilineText(e.text, p.x, p.y, fontHeight, e.type === 'MTEXT');
+        }
+        ctx.restore();
+        break;
+      }
+    }
+  }
+}
+
+function drawMultilineText(text, x, y, fontHeight, isMText) {
+  // MTEXT-ben a \P sortörést jelent; egyszerű DXF formázó kódokat (\f, \H, stb.) eltávolítunk
+  let cleaned = text;
+  if (isMText) {
+    // Eltávolítjuk a formázó kódokat: \f...; \H...; \C...; { } { } stb.
+    cleaned = cleaned
+      .replace(/\\[fHCQWApLOlou][^\\;]*;?/g, '')
+      .replace(/[{}]/g, '');
+  }
+  const lines = cleaned.split(/\\P|\n/);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, y + i * fontHeight * 1.2);
+  }
+}
+
+/* =========================================================
+   FÁJL KEZELÉS
+   ========================================================= */
+const fileInput = document.getElementById('file-input');
+const dropzone = document.getElementById('dropzone');
+const infoPanel = document.getElementById('info-panel');
+const controls = document.getElementById('controls');
+const errorToast = document.getElementById('error-toast');
+const filePill = document.getElementById('file-pill');
+
+function showError(msg) {
+  errorToast.textContent = msg;
+  errorToast.classList.add('visible');
+  setTimeout(() => errorToast.classList.remove('visible'), 4000);
+}
+
+function loadFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.dxf')) {
+    showError('Csak .dxf kiterjesztésű fájlok támogatottak.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const buffer = ev.target.result;
+      const { text, encoding } = decodeDxfText(buffer);
+      const parsed = parseDxf(text);
+
+      if (parsed.entities.length === 0) {
+        showError('Nem található rajzolható entitás a fájlban.');
+        return;
+      }
+
+      dxfData = parsed;
+      bounds = computeBounds(parsed.entities);
+
+      document.getElementById('info-size').textContent = formatBytes(file.size);
+      document.getElementById('info-entities').textContent = parsed.entities.length;
+
+      // Rétegek: csak az aktívan használtakat számoljuk és listázzuk
+      const layerUsage = {};
+      for (const e of parsed.entities) {
+        const ln = e.layer || '0';
+        layerUsage[ln] = (layerUsage[ln] || 0) + 1;
+      }
+      const usedLayerNames = Object.keys(layerUsage);
+      document.getElementById('info-layers').textContent = usedLayerNames.length;
+
+      // hidden layers globális set + override-ok - tisztítjuk új fájlnál
+      hiddenLayers.clear();
+      Object.keys(layerColorOverrides).forEach(k => delete layerColorOverrides[k]);
+      textsVisible = true;
+      // master toggle vissza alaphelyzetbe
+      document.getElementById('layer-master-toggle').classList.remove('all-hidden');
+      const tmt = document.getElementById('text-master-toggle');
+      tmt.classList.remove('all-hidden');
+      tmt.setAttribute('aria-pressed', 'false');
+      document.getElementById('text-toggle-row').classList.remove('hidden');
+
+      const layerListEl = document.getElementById('layer-list');
+      layerListEl.innerHTML = '';
+      usedLayerNames
+        .sort((a, b) => layerUsage[b] - layerUsage[a])
+        .forEach(name => {
+          const layer = parsed.layers[name] || { color: null };
+          const swatchColor = layer.color || '#FFB820';
+          layerListEl.appendChild(buildLayerItem(name, swatchColor, layerUsage[name]));
+        });
+
+      // Entitások szekció - rendered csoport
+      const renderedRows = document.getElementById('entity-rows-rendered');
+      renderedRows.innerHTML = '';
+      const renderedTypeOrder = [
+        ['LINE', 'Vonal'],
+        ['CIRCLE', 'Kör'],
+        ['ARC', 'Ív'],
+        ['LWPOLYLINE', 'LWPolyline'],
+        ['POLYLINE', 'Polyline'],
+        ['POINT', 'Pont'],
+        ['TEXT', 'Felirat'],
+        ['MTEXT', 'Felirat (több sor)'],
+      ];
+      const typeCounts = {};
+      for (const e of parsed.entities) typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;
+
+      let hasRendered = false;
+      for (const [type, label] of renderedTypeOrder) {
+        if (typeCounts[type]) {
+          renderedRows.appendChild(buildEntityRow(label, typeCounts[type], false));
+          hasRendered = true;
+        }
+      }
+      document.getElementById('entity-group-rendered').classList.toggle('hidden', !hasRendered);
+
+      // Feliratok kapcsoló: csak akkor mutatjuk, ha van TEXT vagy MTEXT
+      const textCount = (typeCounts.TEXT || 0) + (typeCounts.MTEXT || 0);
+      const textRow = document.getElementById('text-toggle-row');
+      if (textCount > 0) {
+        textRow.hidden = false;
+        document.getElementById('text-toggle-count').textContent = textCount;
+      } else {
+        textRow.hidden = true;
+      }
+
+      // Entitások szekció - skipped csoport
+      const skippedRows = document.getElementById('entity-rows-skipped');
+      skippedRows.innerHTML = '';
+      const skippedTypes = Object.keys(parsed.skipped || {});
+      if (skippedTypes.length > 0) {
+        skippedTypes
+          .sort((a, b) => parsed.skipped[b] - parsed.skipped[a])
+          .forEach(type => {
+            skippedRows.appendChild(buildEntityRow(type, parsed.skipped[type], true));
+          });
+        document.getElementById('entity-group-skipped').classList.remove('hidden');
+      } else {
+        document.getElementById('entity-group-skipped').classList.add('hidden');
+      }
+
+      filePill.textContent = file.name;
+      filePill.classList.remove('empty');
+
+      dropzone.classList.add('hidden');
+      infoPanel.classList.add('visible');
+      controls.classList.add('visible');
+
+      requestAnimationFrame(() => {
+        resizeCanvas();
+        fitToView();
+      });
+    } catch (err) {
+      console.error(err);
+      showError('Hiba a fájl feldolgozása közben: ' + err.message);
+    }
+  };
+  reader.onerror = () => showError('A fájlt nem sikerült beolvasni.');
+  reader.readAsArrayBuffer(file);
+}
+
+/* =========================================================
+   KARAKTERKÓDOLÁS DETEKTÁLÁSA
+   - DXF R2007+ : UTF-8
+   - Régebbi    : system codepage (HU: Windows-1250)
+   - $DWGCODEPAGE változó megadja az eredeti kódlapot
+   ========================================================= */
+function decodeDxfText(buffer) {
+  const bytes = new Uint8Array(buffer);
+
+  // 1) BOM detektálás
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return { text: new TextDecoder('utf-8').decode(bytes.slice(3)), encoding: 'UTF-8 (BOM)' };
+  }
+
+  // 2) Próbáljuk UTF-8-ként, hibára futás esetén dobjunk vissza
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return { text, encoding: 'UTF-8' };
+  } catch (e) {
+    // 3) Nem érvényes UTF-8 → próbáljuk meg felismerni a $DWGCODEPAGE-t ASCII fejlécből
+    // A header eleje ASCII, így nyugodtan dekódolhatjuk Latin-1-ként az első ~4KB-ot a változó kereséséhez.
+    const headerSlice = bytes.slice(0, Math.min(bytes.length, 8192));
+    const headerText = new TextDecoder('latin1').decode(headerSlice);
+    const cp = detectCodepageFromHeader(headerText);
+
+    // Ha sikerült specifikus kódlapot azonosítani, és a böngésző támogatja, használjuk
+    const candidates = cp ? [cp, 'windows-1250', 'windows-1252'] : ['windows-1250', 'windows-1252'];
+    for (const enc of candidates) {
+      try {
+        const text = new TextDecoder(enc).decode(bytes);
+        return { text, encoding: enc };
+      } catch (_) { /* próbáljuk a következőt */ }
+    }
+    // Végső fallback
+    return { text: new TextDecoder('latin1').decode(bytes), encoding: 'Latin-1 (fallback)' };
+  }
+}
+
+function detectCodepageFromHeader(headerText) {
+  // $DWGCODEPAGE\n  3\nANSI_1250 alakú sor keresése
+  const m = headerText.match(/\$DWGCODEPAGE[\s\S]{0,40}?ANSI_(\d{3,4})/i);
+  if (!m) return null;
+  const code = m[1];
+  const map = {
+    '1250': 'windows-1250', // közép-európai (HU, PL, CZ, ...)
+    '1251': 'windows-1251', // cirill
+    '1252': 'windows-1252', // nyugat-európai
+    '1253': 'windows-1253', // görög
+    '1254': 'windows-1254', // török
+    '1255': 'windows-1255', // héber
+    '1256': 'windows-1256', // arab
+    '1257': 'windows-1257', // balti
+    '1258': 'windows-1258', // vietnámi
+    '932':  'shift_jis',
+    '936':  'gb2312',
+    '949':  'euc-kr',
+    '950':  'big5',
+  };
+  return map[code] || null;
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+document.getElementById('header-open').addEventListener('click', () => fileInput.click());
+
+// Drag & drop az egész oldalra
+['dragenter', 'dragover'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    e.preventDefault();
+    document.body.classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    e.preventDefault();
+    if (evt === 'dragleave' && e.relatedTarget) return;
+    document.body.classList.remove('dragover');
+  });
+});
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+
+/* =========================================================
+   PAN, ZOOM, KOORDINÁTA-KIJELZŐ
+   ========================================================= */
+const coordsEl = document.getElementById('coords');
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStart = { x: e.clientX - view.x, y: e.clientY - view.y };
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+
+  if (isDragging && dxfData) {
+    view.x = e.clientX - dragStart.x;
+    view.y = e.clientY - dragStart.y;
+    render();
+  }
+
+  if (dxfData) {
+    const w = screenToWorld(sx, sy);
+    coordsEl.textContent = `X: ${w.x.toFixed(2)}  Y: ${w.y.toFixed(2)}  ·  ZOOM: ${view.scale.toFixed(2)}x`;
+  }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  if (!dxfData) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  const before = screenToWorld(sx, sy);
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  view.scale *= factor;
+  // a kurzor alatti pont helyben maradjon
+  view.x = sx - before.x * view.scale;
+  view.y = sy + before.y * view.scale;
+  render();
+}, { passive: false });
+
+/* =========================================================
+   KONTROLL GOMBOK
+   ========================================================= */
+document.getElementById('btn-fit').addEventListener('click', fitToView);
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  view.scale *= 1.25; render();
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  view.scale /= 1.25; render();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  dxfData = null;
+  bounds = null;
+  hiddenLayers.clear();
+  Object.keys(layerColorOverrides).forEach(k => delete layerColorOverrides[k]);
+  textsVisible = true;
+  fileInput.value = '';
+  filePill.textContent = 'Nincs fájl betöltve';
+  filePill.classList.add('empty');
+  dropzone.classList.remove('hidden');
+  infoPanel.classList.remove('visible', 'collapsed');
+  controls.classList.remove('visible');
+  // Master toggle-ok vissza alapba
+  document.getElementById('layer-master-toggle').classList.remove('all-hidden');
+  document.getElementById('text-master-toggle').classList.remove('all-hidden');
+  document.getElementById('text-toggle-row').hidden = true;
+  // Entitások szekció vissza alapba (csukott)
+  const et = document.getElementById('entities-toggle');
+  if (et && !et.classList.contains('collapsed')) {
+    et.classList.add('collapsed');
+    et.setAttribute('aria-expanded', 'false');
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  coordsEl.textContent = 'X: 0.00  Y: 0.00  ·  ZOOM: 1.00x';
+});
+
+// Becsukható "Rajz adatok" panel
+const infoToggle = document.getElementById('info-toggle');
+infoToggle.addEventListener('click', () => {
+  const collapsed = infoPanel.classList.toggle('collapsed');
+  infoToggle.setAttribute('aria-expanded', String(!collapsed));
+});
+
+// Becsukható "Entitások" alszekció (alapból csukva)
+const entitiesToggle = document.getElementById('entities-toggle');
+entitiesToggle.addEventListener('click', () => {
+  const isCollapsed = entitiesToggle.classList.toggle('collapsed');
+  entitiesToggle.setAttribute('aria-expanded', String(!isCollapsed));
+});
+
+// Master réteg láthatóság toggle (összes be/ki)
+const layerMasterToggle = document.getElementById('layer-master-toggle');
+layerMasterToggle.addEventListener('click', () => {
+  const items = document.querySelectorAll('.layer-item');
+  if (items.length === 0) return;
+  // Ha bármelyik látható -> mindet kikapcsoljuk; ha mind rejtett -> mindet bekapcsoljuk
+  const anyVisible = Array.from(items).some(it => !it.classList.contains('hidden'));
+  items.forEach(it => {
+    const layerName = it.dataset.layer;
+    const visBtn = it.querySelector('.layer-visibility');
+    if (anyVisible) {
+      hiddenLayers.add(layerName);
+      it.classList.add('hidden');
+      visBtn.setAttribute('aria-pressed', 'true');
+    } else {
+      hiddenLayers.delete(layerName);
+      it.classList.remove('hidden');
+      visBtn.setAttribute('aria-pressed', 'false');
+    }
+  });
+  updateMasterLayerToggleState();
+  render();
+});
+
+// Feliratok master toggle
+const textMasterToggle = document.getElementById('text-master-toggle');
+textMasterToggle.addEventListener('click', () => {
+  textsVisible = !textsVisible;
+  textMasterToggle.classList.toggle('all-hidden', !textsVisible);
+  textMasterToggle.setAttribute('aria-pressed', String(!textsVisible));
+  document.getElementById('text-toggle-row').classList.toggle('hidden', !textsVisible);
+  render();
+});
+
+/* =========================================================
+   COLOR PICKER MODAL
+   ========================================================= */
+const colorModalBackdrop = document.getElementById('color-modal-backdrop');
+const colorModalLayerNameEl = document.getElementById('color-modal-layer-name');
+const colorPaletteEl = document.getElementById('color-palette');
+const colorCustomPicker = document.getElementById('color-custom-picker');
+const colorCustomHex = document.getElementById('color-custom-hex');
+
+let activeLayerForColor = null;
+let activeSwatchEl = null;
+
+// Előre definiált paletta - 50 jól használható szín
+const COLOR_PALETTE = [
+  // Sor 1: tiszta színek
+  '#FF3B30', '#FF6B00', '#FFB820', '#FFD44D', '#9CDC1A', '#22D07D', '#17C2C2', '#3B9BFF', '#5E5CE6', '#AF52DE',
+  // Sor 2: pasztell
+  '#FF9999', '#FFC499', '#FFE099', '#FFF099', '#D4F099', '#99E0B8', '#99D4D4', '#99C2FF', '#B8B7FF', '#D6B0FF',
+  // Sor 3: sötét/telített
+  '#B22A24', '#B25500', '#B28015', '#B29637', '#6E9C12', '#178F58', '#108080', '#286FB2', '#3F3DA0', '#7B36A0',
+  // Sor 4: szürkék + speciális
+  '#FFFFFF', '#E6EDF3', '#A9B4C2', '#728091', '#4A5563', '#222C3A', '#141C26', '#0F1620', '#FF00FF', '#00FF00',
+  // Sor 5: AutoCAD klasszikusok
+  '#FF0000', '#FFFF00', '#00FFFF', '#0000FF', '#FF6347', '#FFA500', '#FFD700', '#7CFC00', '#00CED1', '#FF1493',
+];
+
+function buildColorPalette() {
+  colorPaletteEl.innerHTML = '';
+  COLOR_PALETTE.forEach(hex => {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'color-cell';
+    cell.style.background = hex;
+    cell.title = hex;
+    cell.dataset.color = hex;
+    cell.addEventListener('click', () => applyColor(hex));
+    colorPaletteEl.appendChild(cell);
+  });
+}
+buildColorPalette();
+
+function openColorModal(layerName, swatchEl) {
+  activeLayerForColor = layerName;
+  activeSwatchEl = swatchEl;
+  colorModalLayerNameEl.textContent = layerName;
+
+  const currentColor = (getLayerDisplayColor(layerName) || '#FFB820').toUpperCase();
+  colorCustomPicker.value = normalizeHex(currentColor);
+  colorCustomHex.value = currentColor;
+
+  // Aktuális szín kiemelése a palettán
+  document.querySelectorAll('.color-cell').forEach(c => {
+    c.classList.toggle('selected', c.dataset.color.toUpperCase() === currentColor);
+  });
+
+  colorModalBackdrop.hidden = false;
+  // következő frame-ben adjuk hozzá a visible-t (fade-in)
+  requestAnimationFrame(() => colorModalBackdrop.classList.add('visible'));
+}
+
+function closeColorModal() {
+  colorModalBackdrop.classList.remove('visible');
+  setTimeout(() => { colorModalBackdrop.hidden = true; }, 200);
+  activeLayerForColor = null;
+  activeSwatchEl = null;
+}
+
+function applyColor(hex) {
+  if (!activeLayerForColor) return;
+  const normalized = normalizeHex(hex);
+  if (!normalized) return;
+  layerColorOverrides[activeLayerForColor] = normalized;
+  if (activeSwatchEl) activeSwatchEl.style.background = normalized;
+  render();
+  closeColorModal();
+}
+
+function normalizeHex(input) {
+  if (!input) return null;
+  let s = String(input).trim();
+  if (s.startsWith('#')) s = s.slice(1);
+  if (/^[0-9a-fA-F]{3}$/.test(s)) {
+    s = s.split('').map(c => c + c).join('');
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(s)) {
+    return '#' + s.toUpperCase();
+  }
+  return null;
+}
+
+document.getElementById('color-modal-close').addEventListener('click', closeColorModal);
+colorModalBackdrop.addEventListener('click', (e) => {
+  if (e.target === colorModalBackdrop) closeColorModal();
+});
+
+colorCustomPicker.addEventListener('input', (e) => {
+  const hex = e.target.value.toUpperCase();
+  colorCustomHex.value = hex;
+  applyColor(hex);
+});
+
+colorCustomHex.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const normalized = normalizeHex(colorCustomHex.value);
+    if (normalized) {
+      colorCustomPicker.value = normalized;
+      applyColor(normalized);
+    }
+  }
+});
+
+document.getElementById('color-modal-reset').addEventListener('click', () => {
+  if (!activeLayerForColor) return;
+  delete layerColorOverrides[activeLayerForColor];
+  // visszaállítjuk az eredeti szín swatch-ban
+  if (activeSwatchEl && dxfData) {
+    const layer = dxfData.layers[activeLayerForColor];
+    activeSwatchEl.style.background = (layer && layer.color) || '#FFB820';
+  }
+  render();
+  closeColorModal();
+});
+
+// Escape gombra zárás
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && colorModalBackdrop.classList.contains('visible')) {
+    closeColorModal();
+  }
+});
+
+/* =========================================================
+   PANEL BUILDER FÜGGVÉNYEK
+   ========================================================= */
+
+function buildLayerItem(name, swatchColor, count) {
+  const item = document.createElement('div');
+  item.className = 'layer-item';
+  item.dataset.layer = name;
+
+  const visBtn = document.createElement('button');
+  visBtn.className = 'layer-visibility';
+  visBtn.type = 'button';
+  visBtn.setAttribute('aria-label', `${name} réteg láthatóságának kapcsolása`);
+  visBtn.setAttribute('aria-pressed', 'false');
+  visBtn.title = 'Réteg ki/bekapcsolása';
+  visBtn.innerHTML = EYE_ICON_ON + EYE_ICON_OFF;
+  visBtn.addEventListener('click', () => toggleLayerVisibility(name, item, visBtn));
+
+  const swatch = document.createElement('button');
+  swatch.className = 'layer-swatch';
+  swatch.type = 'button';
+  swatch.setAttribute('aria-label', `${name} réteg színének módosítása`);
+  swatch.title = 'Szín módosítása';
+  swatch.style.background = swatchColor;
+  swatch.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    openColorModal(name, swatch);
+  });
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'layer-name';
+  nameEl.textContent = name;
+  nameEl.title = name;
+
+  const countEl = document.createElement('span');
+  countEl.className = 'layer-count';
+  countEl.textContent = count;
+
+  item.appendChild(visBtn);
+  item.appendChild(swatch);
+  item.appendChild(nameEl);
+  item.appendChild(countEl);
+  return item;
+}
+
+function toggleLayerVisibility(name, itemEl, btnEl) {
+  if (hiddenLayers.has(name)) {
+    hiddenLayers.delete(name);
+    itemEl.classList.remove('hidden');
+    btnEl.setAttribute('aria-pressed', 'false');
+  } else {
+    hiddenLayers.add(name);
+    itemEl.classList.add('hidden');
+    btnEl.setAttribute('aria-pressed', 'true');
+  }
+  updateMasterLayerToggleState();
+  render();
+}
+
+function updateMasterLayerToggleState() {
+  const master = document.getElementById('layer-master-toggle');
+  if (!master) return;
+  const items = document.querySelectorAll('.layer-item');
+  if (items.length === 0) {
+    master.classList.remove('all-hidden');
+    return;
+  }
+  // ha minden item rejtett -> master "all-hidden"
+  let allHidden = true;
+  items.forEach(it => { if (!it.classList.contains('hidden')) allHidden = false; });
+  master.classList.toggle('all-hidden', allHidden);
+  master.setAttribute('aria-pressed', String(allHidden));
+}
+
+function buildEntityRow(label, count, isWarn) {
+  const row = document.createElement('div');
+  row.className = 'entity-row' + (isWarn ? ' warn' : '');
+  const typeEl = document.createElement('span');
+  typeEl.className = 'entity-type';
+  typeEl.textContent = label;
+  const countEl = document.createElement('span');
+  countEl.className = 'entity-count';
+  countEl.textContent = count;
+  row.appendChild(typeEl);
+  row.appendChild(countEl);
+  return row;
+}
+
+// Init
+resizeCanvas();
+</script>
+
+</body>
+</html>
