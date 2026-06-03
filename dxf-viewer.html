@@ -314,7 +314,6 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
-    pointer-events: auto;
     border-radius: 4px;
     font-family: var(--font-body);
     border: none;
@@ -3231,20 +3230,20 @@ canvas.addEventListener('mousemove', (e) => {
   const sx = e.clientX - rect.left;
   const sy = e.clientY - rect.top;
 
-  if (isDragging && dxfData) {
+  if (isDragging && hasAnyData()) {
     view.x = e.clientX - dragStart.x;
     view.y = e.clientY - dragStart.y;
     render();
   }
 
-  if (dxfData) {
+  if (hasAnyData()) {
     const w = screenToWorld(sx, sy);
     coordsEl.textContent = `X: ${w.x.toFixed(2)}  Y: ${w.y.toFixed(2)}`;
   }
 });
 
 canvas.addEventListener('wheel', (e) => {
-  if (!dxfData) return;
+  if (!hasAnyData()) return;
   e.preventDefault();
   const rect = canvas.getBoundingClientRect();
   const sx = e.clientX - rect.left;
@@ -3269,7 +3268,7 @@ function getTouchPos(t) {
 }
 
 canvas.addEventListener('touchstart', (e) => {
-  if (!dxfData) return;
+  if (!hasAnyData()) return;
   if (e.touches.length === 1) {
     const p = getTouchPos(e.touches[0]);
     touchState = {
@@ -3300,7 +3299,7 @@ canvas.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-  if (!dxfData || !touchState) return;
+  if (!hasAnyData() || !touchState) return;
   e.preventDefault();
   if (touchState.mode === 'pan' && e.touches.length === 1) {
     const p = getTouchPos(e.touches[0]);
@@ -3906,8 +3905,8 @@ function applyPoints(data) {
   pointSources.push(src);
   activeSourceId = id;
 
-  // Panel megmutatása legalább DXF esetén, dropzone elrejtése
-  if (dxfData) infoPanel.classList.add('visible');
+  // Panel megmutatása (pontfájlnál is, ne csak DXF-nél), dropzone elrejtése
+  infoPanel.classList.add('visible');
   dropzone.classList.add('hidden');
 
   bounds = computeCombinedBounds();
