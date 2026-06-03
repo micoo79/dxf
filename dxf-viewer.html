@@ -1847,11 +1847,6 @@
             <button class="pp-swatch" id="pp-num-color" type="button" title="Pontszám szín" aria-label="Pontszám szín"></button>
             <span class="pp-label">Pontszám</span>
           </div>
-          <div class="pp-slider-row" id="pp-num-size-row">
-            <span class="pp-slider-label">Méret</span>
-            <input type="range" min="1" max="300" step="1" id="pp-num-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-num-size-val">100%</span>
-          </div>
 
           <div class="pp-row">
             <button class="layer-visibility pp-toggle" id="pp-code-toggle" type="button" aria-pressed="true" title="Pontkód ki/bekapcsolása">
@@ -1860,11 +1855,6 @@
             </button>
             <button class="pp-swatch" id="pp-code-color" type="button" title="Pontkód szín" aria-label="Pontkód szín"></button>
             <span class="pp-label">Pontkód</span>
-          </div>
-          <div class="pp-slider-row" id="pp-code-size-row">
-            <span class="pp-slider-label">Méret</span>
-            <input type="range" min="1" max="300" step="1" id="pp-code-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-code-size-val">100%</span>
           </div>
 
           <div class="pp-row" id="pp-z-row">
@@ -1875,10 +1865,11 @@
             <button class="pp-swatch" id="pp-z-color" type="button" title="Z érték szín" aria-label="Z érték szín"></button>
             <span class="pp-label">Z érték</span>
           </div>
-          <div class="pp-slider-row" id="pp-z-size-row">
-            <span class="pp-slider-label">Méret</span>
-            <input type="range" min="1" max="300" step="1" id="pp-z-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-z-size-val">100%</span>
+
+          <div class="pp-slider-row" id="pp-text-size-row">
+            <span class="pp-slider-label">Felirat</span>
+            <input type="range" min="1" max="300" step="1" id="pp-text-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-text-size-val">20%</span>
           </div>
 
           <div class="pp-row pp-marker-header">
@@ -1889,7 +1880,7 @@
           <div class="pp-slider-row" id="pp-marker-size-row">
             <span class="pp-slider-label">Méret</span>
             <input type="range" min="1" max="400" step="1" id="pp-marker-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-marker-size-val">100%</span>
+            <span class="pp-slider-val" id="pp-marker-size-val">8%</span>
           </div>
         </div>
 
@@ -2787,13 +2778,15 @@ function renderDxf() {
 function renderPointSource(src) {
   const markerColor = src.color || DEFAULT_POINTS_COLOR;
   // Marker és betűméretek: a view.scale-lel együtt nőnek/csökkennek (világ-egységben "élnek").
-  const r = MARKER_BASE_PX * ((src.markerSize || 100) / 100) * view.scale;
+  const r = MARKER_BASE_PX * ((src.markerSize || 8) / 100) * view.scale;
   const showNum = !!src.showNumber;
   const showCode = !!src.showCode;
   const showZ = !!src.showZ;
-  const numSize = TEXT_BASE_PX * ((src.numberSize || 100) / 100) * view.scale;
-  const codeSize = TEXT_BASE_PX * ((src.codeSize || 100) / 100) * view.scale;
-  const zSize = TEXT_BASE_PX * ((src.zSize || 100) / 100) * view.scale;
+  // Közös felirat-méret (numSize = codeSize = zSize)
+  const textPx = TEXT_BASE_PX * ((src.textSize || 20) / 100) * view.scale;
+  const numSize = textPx;
+  const codeSize = textPx;
+  const zSize = textPx;
   const numColor = src.numberColor || markerColor;
   const codeColor = src.codeColor || markerColor;
   const zColor = src.zColor || markerColor;
@@ -3877,22 +3870,19 @@ document.getElementById('txt-confirm').addEventListener('click', () => {
 
 function applyPoints(data) {
   const id = 'p' + (nextPointId++);
-  const base = data.color || DEFAULT_POINTS_COLOR;
   const src = {
     id, kind: 'points',
     name: data.fileName,
     points: data.points,
-    color: base, // marker / pill swatch alap-szín
+    color: data.color || '#FFFFFF', // marker / pill swatch alap-szín: fehér
     visibility: 0,
     // Per-source megjelenítési beállítások (a "Pont adatok" panel állítja):
     showNumber: false,
     showCode: false,
     showZ: false,
-    // Méretek százalékos (relatív) értékben: 100% = TEXT_BASE_PX / MARKER_BASE_PX
-    numberSize: 100,
-    codeSize: 100,
-    zSize: 100,
-    markerSize: 100,
+    // Egyetlen közös csúszka a feliratokra (%), külön a markerre
+    textSize: 20,
+    markerSize: 8,
     markerShape: 'crossdot', // crossdot | circle | ring | plus | x
     // Per-attribútum alapszínek: pontszám sárga, kód piros, Z érték narancs
     numberColor: '#FFFF4D',
@@ -4047,34 +4037,25 @@ function populatePointsPanel(src) {
   const hasZ = src.points.some(p => p.z != null && isFinite(p.z));
 
   const numRow = document.getElementById('pp-num-toggle').closest('.pp-row');
-  const numSizeRow = document.getElementById('pp-num-size-row');
   const codeRow = document.getElementById('pp-code-toggle').closest('.pp-row');
-  const codeSizeRow = document.getElementById('pp-code-size-row');
   const zRow = document.getElementById('pp-z-row');
-  const zSizeRow = document.getElementById('pp-z-size-row');
   numRow.hidden = !hasNumbers;
-  numSizeRow.hidden = !hasNumbers;
   codeRow.hidden = !hasCodes;
-  codeSizeRow.hidden = !hasCodes;
   zRow.hidden = !hasZ;
-  zSizeRow.hidden = !hasZ;
 
   // aria-pressed='true' = REJTETT, 'false' = LÁTHATÓ (a meglévő layer-visibility minta)
   document.getElementById('pp-num-toggle').setAttribute('aria-pressed', src.showNumber ? 'false' : 'true');
   document.getElementById('pp-code-toggle').setAttribute('aria-pressed', src.showCode ? 'false' : 'true');
   document.getElementById('pp-z-toggle').setAttribute('aria-pressed', src.showZ ? 'false' : 'true');
 
-  document.getElementById('pp-num-size').value = src.numberSize;
-  document.getElementById('pp-num-size-val').textContent = src.numberSize + '%';
-  numSizeRow.classList.toggle('disabled', !src.showNumber);
-
-  document.getElementById('pp-code-size').value = src.codeSize;
-  document.getElementById('pp-code-size-val').textContent = src.codeSize + '%';
-  codeSizeRow.classList.toggle('disabled', !src.showCode);
-
-  document.getElementById('pp-z-size').value = src.zSize;
-  document.getElementById('pp-z-size-val').textContent = src.zSize + '%';
-  zSizeRow.classList.toggle('disabled', !src.showZ);
+  // Közös felirat-méret csúszka (csak akkor látható, ha legalább egy felirat be van kapcsolva)
+  const textSizeRow = document.getElementById('pp-text-size-row');
+  const anyTextShown = (src.showNumber && hasNumbers) || (src.showCode && hasCodes) || (src.showZ && hasZ);
+  const anyTextAvailable = hasNumbers || hasCodes || hasZ;
+  textSizeRow.hidden = !anyTextAvailable;
+  textSizeRow.classList.toggle('disabled', !anyTextShown);
+  document.getElementById('pp-text-size').value = src.textSize;
+  document.getElementById('pp-text-size-val').textContent = src.textSize + '%';
 
   document.getElementById('pp-marker-size').value = src.markerSize;
   document.getElementById('pp-marker-size-val').textContent = src.markerSize + '%';
@@ -4373,13 +4354,6 @@ document.getElementById('pp-z-toggle').addEventListener('click', () => {
   populatePointsPanel(src);
   render();
 });
-document.getElementById('pp-z-size').addEventListener('input', (e) => {
-  const src = getActivePointSource(); if (!src) return;
-  src.zSize = parseFloat(e.target.value);
-  document.getElementById('pp-z-size-val').textContent = src.zSize + '%';
-  render();
-});
-
 // "Használt pontkódok" szekció becsukás-toggle
 document.getElementById('codes-toggle').addEventListener('click', () => {
   const t = document.getElementById('codes-toggle');
@@ -4412,16 +4386,10 @@ document.getElementById('pp-code-toggle').addEventListener('click', () => {
   populatePointsPanel(src);
   render();
 });
-document.getElementById('pp-num-size').addEventListener('input', (e) => {
+document.getElementById('pp-text-size').addEventListener('input', (e) => {
   const src = getActivePointSource(); if (!src) return;
-  src.numberSize = parseFloat(e.target.value);
-  document.getElementById('pp-num-size-val').textContent = src.numberSize + '%';
-  render();
-});
-document.getElementById('pp-code-size').addEventListener('input', (e) => {
-  const src = getActivePointSource(); if (!src) return;
-  src.codeSize = parseFloat(e.target.value);
-  document.getElementById('pp-code-size-val').textContent = src.codeSize + '%';
+  src.textSize = parseFloat(e.target.value);
+  document.getElementById('pp-text-size-val').textContent = src.textSize + '%';
   render();
 });
 document.getElementById('pp-marker-size').addEventListener('input', (e) => {
