@@ -1426,38 +1426,57 @@
     border-top: 1px solid var(--panel-border);
   }
 
-  /* Mini color modal (16 alapszín) */
-  .mini-color-modal {
+  /* Popover (helyben felugró kis ablak: szín- és alak-választó) */
+  .popover {
+    position: fixed;
+    z-index: 1100;
     background: var(--surface-1);
     border: 1px solid var(--panel-border);
     border-radius: 8px;
-    padding: 14px;
-    width: 240px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
-    transform: translateY(8px);
-    transition: transform 0.2s ease;
+    padding: 10px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    pointer-events: none;
   }
-  .color-modal-backdrop.visible .mini-color-modal {
+  .popover.visible {
+    opacity: 1;
     transform: translateY(0);
+    pointer-events: auto;
   }
-  .mini-modal-head {
+  .popover-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
-  .mini-modal-title {
+  .popover-title {
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     color: var(--text-secondary);
   }
+  .popover-close {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    display: flex;
+  }
+  .popover-close:hover { color: var(--text-primary); }
+  .popover-close svg { width: 12px; height: 12px; }
+
+  .color-popover { width: 188px; }
   .mini-color-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    gap: 4px;
   }
   .mini-color-cell {
     aspect-ratio: 1;
@@ -1469,7 +1488,7 @@
     transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .mini-color-cell:hover {
-    transform: scale(1.1);
+    transform: scale(1.12);
     border-color: var(--text-primary);
     z-index: 1;
   }
@@ -1477,6 +1496,51 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(34, 208, 125, 0.4);
   }
+
+  /* Pontjelölő alak választó */
+  .shape-popover { width: 208px; }
+  .shape-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+  .shape-cell {
+    aspect-ratio: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .shape-cell:hover { border-color: var(--accent); }
+  .shape-cell.selected {
+    border-color: var(--accent);
+    background: rgba(34, 208, 125, 0.08);
+  }
+  .shape-cell svg { width: 22px; height: 22px; }
+
+  /* Pontjel alak preview gomb a panelben */
+  .pp-shape {
+    width: 22px;
+    height: 22px;
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pp-shape:hover { border-color: var(--accent); }
+  .pp-shape svg { width: 16px; height: 16px; }
 
   /* Használt pontkódok lista */
   .code-list {
@@ -1785,6 +1849,7 @@
           </div>
 
           <div class="pp-row pp-marker-header">
+            <button class="pp-shape" id="pp-marker-shape" type="button" title="Pontjelölő alak" aria-label="Pontjelölő alak"></button>
             <button class="pp-swatch" id="pp-marker-color" type="button" title="Pontjel szín" aria-label="Pontjel szín"></button>
             <span class="pp-label">Pontjel</span>
           </div>
@@ -1856,18 +1921,28 @@
   </div>
 </div>
 
-<div class="color-modal-backdrop mini-modal-backdrop" id="mini-modal-backdrop" hidden>
-  <div class="mini-color-modal" role="dialog" aria-labelledby="mini-modal-title">
-    <div class="mini-modal-head">
-      <span class="mini-modal-title" id="mini-modal-title">Szín</span>
-      <button class="color-modal-close" id="mini-modal-close" type="button" aria-label="Bezárás">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
-        </svg>
-      </button>
-    </div>
-    <div class="mini-color-grid" id="mini-color-grid"></div>
+<div class="popover color-popover" id="color-popover" hidden>
+  <div class="popover-head">
+    <span class="popover-title" id="color-popover-title">Szín</span>
+    <button class="popover-close" id="color-popover-close" type="button" aria-label="Bezárás">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+      </svg>
+    </button>
   </div>
+  <div class="mini-color-grid" id="mini-color-grid"></div>
+</div>
+
+<div class="popover shape-popover" id="shape-popover" hidden>
+  <div class="popover-head">
+    <span class="popover-title">Pontjelölő</span>
+    <button class="popover-close" id="shape-popover-close" type="button" aria-label="Bezárás">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+      </svg>
+    </button>
+  </div>
+  <div class="shape-grid" id="shape-grid"></div>
 </div>
 
 <div class="color-modal-backdrop" id="color-modal-backdrop" hidden>
@@ -2669,25 +2744,20 @@ function renderPointSource(src) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
+  const shape = src.markerShape || 'crossdot';
+
   for (const p of src.points) {
-    // Pontkód-szűrés: ha a pont kódja kikapcsolt halmazban van, kihagyjuk
+    // Pontkód-szűrés (kód + kód nélkül egyaránt)
     const pcode = (p.code != null && p.code !== '') ? String(p.code) : null;
     if (pcode && hiddenCodes.has(pcode)) continue;
+    if (!pcode && hiddenCodes.has('__nocode__')) continue;
 
     const s = worldToScreen(p.x, p.y);
 
-    // Marker
+    // Marker — 5 alak közül
     ctx.strokeStyle = markerColor;
     ctx.fillStyle = markerColor;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(s.x - r * 2, s.y);
-    ctx.lineTo(s.x + r * 2, s.y);
-    ctx.moveTo(s.x, s.y - r * 2);
-    ctx.lineTo(s.x, s.y + r * 2);
-    ctx.stroke();
+    drawMarker(s.x, s.y, r, shape);
 
     // Feliratok stackelve jobb oldalra, marker tetejétől lefelé
     let labelY = s.y - r;
@@ -2709,6 +2779,48 @@ function renderPointSource(src) {
       ctx.fillText(p.z.toFixed(2), s.x + offset, labelY);
       labelY += zSize * 1.2;
     }
+  }
+}
+
+// Pontjelölő rajzolása az aktuális strokeStyle/fillStyle-lal. 5 alak támogatott.
+function drawMarker(x, y, r, shape) {
+  switch (shape) {
+    case 'circle':
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case 'ring':
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    case 'plus': {
+      const d = r * 2;
+      ctx.beginPath();
+      ctx.moveTo(x - d, y); ctx.lineTo(x + d, y);
+      ctx.moveTo(x, y - d); ctx.lineTo(x, y + d);
+      ctx.stroke();
+      break;
+    }
+    case 'x': {
+      const d = r * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d);
+      ctx.moveTo(x - d, y + d); ctx.lineTo(x + d, y - d);
+      ctx.stroke();
+      break;
+    }
+    case 'crossdot':
+    default:
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x - r * 2, y); ctx.lineTo(x + r * 2, y);
+      ctx.moveTo(x, y - r * 2); ctx.lineTo(x, y + r * 2);
+      ctx.stroke();
+      break;
   }
 }
 
@@ -3676,11 +3788,12 @@ function applyPoints(data) {
     codeSize: 11,
     zSize: 11,
     markerSize: 3.5,
+    markerShape: 'crossdot', // crossdot | circle | ring | plus | x
     // Per-attribútum színek (alapból mind = marker szín)
     numberColor: base,
     codeColor: base,
     zColor: base,
-    // Pontkód-szűrés: kikapcsolt kódok halmaza
+    // Pontkód-szűrés: kikapcsolt kódok halmaza (sentinel '__nocode__' = kód nélküliek)
     hiddenCodes: new Set(),
   };
   pointSources.push(src);
@@ -3751,7 +3864,7 @@ function buildSourcePill(src) {
     sw.setAttribute('aria-label', 'Szín módosítása');
     sw.addEventListener('click', (e) => {
       e.stopPropagation();
-      openPointColorModal(src, sw);
+      openColorPopover(src, 'color', sw, src.name + ' — Pontjel szín');
     });
     pill.appendChild(sw);
   } else {
@@ -3867,66 +3980,106 @@ function populatePointsPanel(src) {
   document.getElementById('pp-z-color').style.background = src.zColor || src.color;
   document.getElementById('pp-marker-color').style.background = src.color;
 
-  // Használt pontkódok lista
-  buildCodeList(src, hasCodes);
+  // Marker-alak preview gomb
+  document.getElementById('pp-marker-shape').innerHTML = shapeSvg(src.markerShape || 'crossdot');
+
+  // Pontkód-lista (most a kód nélküli pontokat is)
+  buildCodeList(src);
 }
 
-function buildCodeList(src, hasCodes) {
+function buildCodeList(src) {
   const sec = document.getElementById('codes-section');
-  sec.hidden = !hasCodes;
-  if (!hasCodes) return;
   const counts = new Map();
+  let noCodeCount = 0;
   for (const p of src.points) {
-    if (p.code == null || p.code === '') continue;
-    const c = String(p.code);
-    counts.set(c, (counts.get(c) || 0) + 1);
+    if (p.code == null || p.code === '') noCodeCount++;
+    else {
+      const c = String(p.code);
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
   }
-  document.getElementById('codes-count').textContent = counts.size;
+  const totalGroups = counts.size + (noCodeCount > 0 ? 1 : 0);
+  sec.hidden = totalGroups === 0;
+  if (totalGroups === 0) return;
+  document.getElementById('codes-count').textContent = totalGroups;
+
   const listEl = document.getElementById('code-list');
   listEl.innerHTML = '';
   const entries = [...counts.entries()].sort((a,b) => b[1] - a[1]);
   for (const [code, count] of entries) {
-    const item = document.createElement('div');
-    item.className = 'code-item';
-    if (src.hiddenCodes.has(code)) item.classList.add('hidden');
+    listEl.appendChild(buildCodeItem(src, code, count, false));
+  }
+  if (noCodeCount > 0) {
+    listEl.appendChild(buildCodeItem(src, '__nocode__', noCodeCount, true));
+  }
+}
 
-    const visBtn = document.createElement('button');
-    visBtn.className = 'layer-visibility';
-    visBtn.type = 'button';
-    visBtn.setAttribute('aria-pressed', src.hiddenCodes.has(code) ? 'true' : 'false');
-    visBtn.title = code + ' ki/bekapcsolása';
-    visBtn.innerHTML = EYE_ICON_ON + EYE_ICON_OFF;
-    visBtn.addEventListener('click', () => {
-      if (src.hiddenCodes.has(code)) {
-        src.hiddenCodes.delete(code);
-        item.classList.remove('hidden');
-        visBtn.setAttribute('aria-pressed', 'false');
-      } else {
-        src.hiddenCodes.add(code);
-        item.classList.add('hidden');
-        visBtn.setAttribute('aria-pressed', 'true');
-      }
-      render();
-    });
-    item.appendChild(visBtn);
+function buildCodeItem(src, key, count, isNoCode) {
+  const item = document.createElement('div');
+  item.className = 'code-item';
+  if (isNoCode) item.classList.add('nocode');
+  if (src.hiddenCodes.has(key)) item.classList.add('hidden');
 
-    const nameEl = document.createElement('span');
-    nameEl.className = 'code-name';
-    nameEl.textContent = code;
-    nameEl.title = code;
-    item.appendChild(nameEl);
+  const visBtn = document.createElement('button');
+  visBtn.className = 'layer-visibility';
+  visBtn.type = 'button';
+  visBtn.setAttribute('aria-pressed', src.hiddenCodes.has(key) ? 'true' : 'false');
+  visBtn.title = (isNoCode ? 'Kód nélküliek' : key) + ' ki/bekapcsolása';
+  visBtn.innerHTML = EYE_ICON_ON + EYE_ICON_OFF;
+  visBtn.addEventListener('click', () => {
+    if (src.hiddenCodes.has(key)) {
+      src.hiddenCodes.delete(key);
+      item.classList.remove('hidden');
+      visBtn.setAttribute('aria-pressed', 'false');
+    } else {
+      src.hiddenCodes.add(key);
+      item.classList.add('hidden');
+      visBtn.setAttribute('aria-pressed', 'true');
+    }
+    render();
+  });
+  item.appendChild(visBtn);
 
-    const countEl = document.createElement('span');
-    countEl.className = 'code-count';
-    countEl.textContent = count;
-    item.appendChild(countEl);
+  const nameEl = document.createElement('span');
+  nameEl.className = 'code-name';
+  if (isNoCode) {
+    nameEl.textContent = '(nincs kód)';
+    nameEl.style.fontStyle = 'italic';
+    nameEl.style.color = 'var(--text-tertiary)';
+  } else {
+    nameEl.textContent = key;
+    nameEl.title = key;
+  }
+  item.appendChild(nameEl);
 
-    listEl.appendChild(item);
+  const countEl = document.createElement('span');
+  countEl.className = 'code-count';
+  countEl.textContent = count;
+  item.appendChild(countEl);
+
+  return item;
+}
+
+// SVG-string egy adott alakhoz - preview-hoz és popover cellákhoz
+function shapeSvg(shape) {
+  const stroke = `stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"`;
+  switch (shape) {
+    case 'circle':
+      return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`;
+    case 'ring':
+      return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" ${stroke}/></svg>`;
+    case 'plus':
+      return `<svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12" ${stroke}/><line x1="12" y1="3" x2="12" y2="21" ${stroke}/></svg>`;
+    case 'x':
+      return `<svg viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="19" ${stroke}/><line x1="5" y1="19" x2="19" y2="5" ${stroke}/></svg>`;
+    case 'crossdot':
+    default:
+      return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor"/><line x1="3" y1="12" x2="21" y2="12" ${stroke}/><line x1="12" y1="3" x2="12" y2="21" ${stroke}/></svg>`;
   }
 }
 
 /* =========================================================
-   MINI COLOR MODAL (16 alapszín, per-attribútum)
+   POPOVER (helyben felugró) - szín- és alak-választó
    ========================================================= */
 const MINI_PALETTE = [
   '#FF3B30', '#FF9500', '#FFCC00', '#FFFF00',
@@ -3934,8 +4087,10 @@ const MINI_PALETTE = [
   '#5E5CE6', '#AF52DE', '#FF2D55', '#FFFFFF',
   '#A9B4C2', '#728091', '#222C3A', '#000000',
 ];
+const SHAPES = ['crossdot', 'circle', 'ring', 'plus', 'x'];
 
-let miniColorTarget = null; // { src, attr, swatchEl }
+let activePopover = null;
+let popoverTarget = null; // { kind: 'color'|'shape', src, attr, swatchEl }
 
 function buildMiniPalette() {
   const grid = document.getElementById('mini-color-grid');
@@ -3947,66 +4102,151 @@ function buildMiniPalette() {
     cell.style.background = hex;
     cell.title = hex;
     cell.dataset.color = hex;
-    cell.addEventListener('click', () => applyMiniColor(hex));
+    cell.addEventListener('click', () => applyPopoverColor(hex));
+    grid.appendChild(cell);
+  }
+}
+function buildShapeGrid() {
+  const grid = document.getElementById('shape-grid');
+  grid.innerHTML = '';
+  for (const shape of SHAPES) {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'shape-cell';
+    cell.dataset.shape = shape;
+    cell.title = shape;
+    cell.innerHTML = shapeSvg(shape);
+    cell.addEventListener('click', () => applyPopoverShape(shape));
     grid.appendChild(cell);
   }
 }
 buildMiniPalette();
+buildShapeGrid();
 
-function openMiniColorModal(src, attr, swatchEl, title) {
-  miniColorTarget = { src, attr, swatchEl };
-  document.getElementById('mini-modal-title').textContent = title;
-  const currentColor = (src[attr] || src.color || DEFAULT_POINTS_COLOR).toUpperCase();
+function positionPopover(popover, anchorEl) {
+  popover.style.top = '0px';
+  popover.style.left = '0px';
+  popover.hidden = false;
+  const aRect = anchorEl.getBoundingClientRect();
+  const pRect = popover.getBoundingClientRect();
+  const margin = 6, vw = window.innerWidth, vh = window.innerHeight;
+  let top = aRect.bottom + margin;
+  let left = aRect.left;
+  if (top + pRect.height > vh - 8) top = aRect.top - pRect.height - margin;
+  if (top < 8) top = 8;
+  if (left + pRect.width > vw - 8) left = vw - pRect.width - 8;
+  if (left < 8) left = 8;
+  popover.style.top = top + 'px';
+  popover.style.left = left + 'px';
+}
+
+function openColorPopover(src, attr, swatchEl, title) {
+  closeActivePopover();
+  popoverTarget = { kind: 'color', src, attr, swatchEl };
+  document.getElementById('color-popover-title').textContent = title;
+  const current = (src[attr] || src.color || DEFAULT_POINTS_COLOR).toUpperCase();
   document.querySelectorAll('#mini-color-grid .mini-color-cell').forEach(c => {
-    c.classList.toggle('selected', c.dataset.color.toUpperCase() === currentColor);
+    c.classList.toggle('selected', c.dataset.color.toUpperCase() === current);
   });
-  const backdrop = document.getElementById('mini-modal-backdrop');
-  backdrop.hidden = false;
-  requestAnimationFrame(() => backdrop.classList.add('visible'));
+  const pop = document.getElementById('color-popover');
+  positionPopover(pop, swatchEl);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+  activePopover = pop;
+  registerOutsideClose();
 }
 
-function closeMiniColorModal() {
-  const backdrop = document.getElementById('mini-modal-backdrop');
-  backdrop.classList.remove('visible');
-  setTimeout(() => { backdrop.hidden = true; }, 200);
-  miniColorTarget = null;
+function openShapePopover(src, anchorEl) {
+  closeActivePopover();
+  popoverTarget = { kind: 'shape', src, anchorEl };
+  const current = src.markerShape || 'crossdot';
+  document.querySelectorAll('#shape-grid .shape-cell').forEach(c => {
+    c.classList.toggle('selected', c.dataset.shape === current);
+  });
+  const pop = document.getElementById('shape-popover');
+  positionPopover(pop, anchorEl);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+  activePopover = pop;
+  registerOutsideClose();
 }
 
-function applyMiniColor(hex) {
-  if (!miniColorTarget) return;
-  const { src, attr, swatchEl } = miniColorTarget;
+function applyPopoverColor(hex) {
+  if (!popoverTarget || popoverTarget.kind !== 'color') return;
+  const { src, attr, swatchEl } = popoverTarget;
   src[attr] = hex;
   if (attr === 'color') {
-    // Marker szín: a fejléc pill swatch-ját is frissítjük
     const pill = sourcesStrip.querySelector(`.source-pill[data-id="${src.id}"] .pill-swatch`);
     if (pill) pill.style.background = hex;
   }
   if (swatchEl) swatchEl.style.background = hex;
   render();
-  closeMiniColorModal();
+  closeActivePopover();
 }
 
-document.getElementById('mini-modal-close').addEventListener('click', closeMiniColorModal);
-document.getElementById('mini-modal-backdrop').addEventListener('click', (e) => {
-  if (e.target.id === 'mini-modal-backdrop') closeMiniColorModal();
-});
+function applyPopoverShape(shape) {
+  if (!popoverTarget || popoverTarget.kind !== 'shape') return;
+  const { src, anchorEl } = popoverTarget;
+  src.markerShape = shape;
+  if (anchorEl) anchorEl.innerHTML = shapeSvg(shape);
+  render();
+  closeActivePopover();
+}
 
-// Swatch gombok a points-panel-en
-document.getElementById('pp-num-color').addEventListener('click', () => {
+function closeActivePopover() {
+  if (!activePopover) return;
+  activePopover.classList.remove('visible');
+  const pop = activePopover;
+  setTimeout(() => { pop.hidden = true; }, 150);
+  activePopover = null;
+  popoverTarget = null;
+  document.removeEventListener('mousedown', outsideMouseHandler, true);
+  document.removeEventListener('touchstart', outsideMouseHandler, true);
+}
+
+function outsideMouseHandler(e) {
+  if (!activePopover) return;
+  if (activePopover.contains(e.target)) return;
+  // ne csukja be, ha a popovert NYITÓ elemre kattintottak (azt majd a saját handler intézi)
+  closeActivePopover();
+}
+
+function registerOutsideClose() {
+  // setTimeout, hogy a megnyitó click ne triggerelje azonnal
+  setTimeout(() => {
+    document.addEventListener('mousedown', outsideMouseHandler, true);
+    document.addEventListener('touchstart', outsideMouseHandler, true);
+  }, 0);
+}
+
+window.addEventListener('resize', closeActivePopover);
+
+document.getElementById('color-popover-close').addEventListener('click', closeActivePopover);
+document.getElementById('shape-popover-close').addEventListener('click', closeActivePopover);
+
+// Swatch / shape gombok a points-panel-en
+document.getElementById('pp-num-color').addEventListener('click', (e) => {
+  e.stopPropagation();
   const src = getActivePointSource(); if (!src) return;
-  openMiniColorModal(src, 'numberColor', document.getElementById('pp-num-color'), 'Pontszám szín');
+  openColorPopover(src, 'numberColor', e.currentTarget, 'Pontszám szín');
 });
-document.getElementById('pp-code-color').addEventListener('click', () => {
+document.getElementById('pp-code-color').addEventListener('click', (e) => {
+  e.stopPropagation();
   const src = getActivePointSource(); if (!src) return;
-  openMiniColorModal(src, 'codeColor', document.getElementById('pp-code-color'), 'Pontkód szín');
+  openColorPopover(src, 'codeColor', e.currentTarget, 'Pontkód szín');
 });
-document.getElementById('pp-z-color').addEventListener('click', () => {
+document.getElementById('pp-z-color').addEventListener('click', (e) => {
+  e.stopPropagation();
   const src = getActivePointSource(); if (!src) return;
-  openMiniColorModal(src, 'zColor', document.getElementById('pp-z-color'), 'Z érték szín');
+  openColorPopover(src, 'zColor', e.currentTarget, 'Z érték szín');
 });
-document.getElementById('pp-marker-color').addEventListener('click', () => {
+document.getElementById('pp-marker-color').addEventListener('click', (e) => {
+  e.stopPropagation();
   const src = getActivePointSource(); if (!src) return;
-  openMiniColorModal(src, 'color', document.getElementById('pp-marker-color'), 'Pontjel szín');
+  openColorPopover(src, 'color', e.currentTarget, 'Pontjel szín');
+});
+document.getElementById('pp-marker-shape').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const src = getActivePointSource(); if (!src) return;
+  openShapePopover(src, e.currentTarget);
 });
 
 // Z érték toggle + slider
@@ -4030,10 +4270,10 @@ document.getElementById('codes-toggle').addEventListener('click', () => {
   t.setAttribute('aria-expanded', String(!collapsed));
 });
 
-// Escape mini-modal-hoz is
+// Escape a popovert is bezárja
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('mini-modal-backdrop').classList.contains('visible')) {
-    closeMiniColorModal();
+  if (e.key === 'Escape' && activePopover) {
+    closeActivePopover();
   }
 });
 
