@@ -1794,7 +1794,7 @@
         </svg>
       </div>
       <h2>Importálj fájlt</h2>
-      <p>Koppints vagy húzd ide a fájlt.<br/>Támogatott: ASCII DXF rajz és pontjegyzék (.txt, .csv, .asc, .xyz)</p>
+      <p>Koppints vagy húzd ide a fájlt.<br/>Támogatott: DXF rajz és pontjegyzék (.txt, .csv, .xyz)</p>
       <button class="drop-import-btn" id="drop-import" type="button">Importálás</button>
       <input type="file" id="file-input" accept=".dxf" hidden />
     </div>
@@ -2786,15 +2786,15 @@ function renderDxf() {
 // kódú pontok kihagyva.
 function renderPointSource(src) {
   const markerColor = src.color || DEFAULT_POINTS_COLOR;
-  // A méretek %-ban tárolva; itt számoljuk át pixelre. Mivel pixelben rajzolunk,
-  // és a worldToScreen már elvégzi a transzformot, zoomolás nem növeli őket.
+  // Marker: pixel-fix (zoomolás nem nagyítja).
+  // Betűméretek: a view.scale-lel együtt nőnek/csökkennek (világ-egységben "élnek").
   const r = MARKER_BASE_PX * ((src.markerSize || 100) / 100);
   const showNum = !!src.showNumber;
   const showCode = !!src.showCode;
   const showZ = !!src.showZ;
-  const numSize = TEXT_BASE_PX * ((src.numberSize || 100) / 100);
-  const codeSize = TEXT_BASE_PX * ((src.codeSize || 100) / 100);
-  const zSize = TEXT_BASE_PX * ((src.zSize || 100) / 100);
+  const numSize = TEXT_BASE_PX * ((src.numberSize || 100) / 100) * view.scale;
+  const codeSize = TEXT_BASE_PX * ((src.codeSize || 100) / 100) * view.scale;
+  const zSize = TEXT_BASE_PX * ((src.zSize || 100) / 100) * view.scale;
   const numColor = src.numberColor || markerColor;
   const codeColor = src.codeColor || markerColor;
   const zColor = src.zColor || markerColor;
