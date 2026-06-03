@@ -1056,6 +1056,182 @@
     transform: translateX(-50%) translateY(0);
   }
 
+  /* ---------- Sources (Háttér DXF + Pontok) ---------- */
+  .sources-section { margin-bottom: 4px; }
+
+  .source-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    color: var(--text-secondary);
+  }
+
+  .source-row .layer-visibility {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+  }
+  .source-row .layer-visibility svg { width: 16px; height: 16px; }
+  .source-row .layer-visibility .icon-off { display: none; }
+  .source-row[aria-hidden="true"] .layer-visibility .icon-on,
+  .source-row.hidden .layer-visibility .icon-on { display: none; }
+  .source-row.hidden .layer-visibility .icon-off { display: block; }
+  .source-row.hidden { color: var(--text-tertiary); opacity: 0.55; }
+
+  .source-icon {
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .source-icon svg { width: 14px; height: 14px; }
+
+  .source-label {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .source-row.hidden .source-label { color: var(--text-tertiary); }
+
+  .source-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    min-width: 24px;
+    text-align: right;
+  }
+
+  .source-remove {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    padding: 4px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .source-remove:hover { color: var(--error); }
+  .source-remove svg { width: 12px; height: 12px; }
+
+  /* ---------- TXT import modal ---------- */
+  .txt-modal {
+    min-width: 460px;
+    max-width: 560px;
+  }
+
+  .txt-section {
+    margin-bottom: 14px;
+  }
+
+  .txt-section-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+
+  .txt-preview {
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    max-height: 130px;
+    overflow: auto;
+    white-space: pre;
+    margin: 0;
+  }
+
+  .txt-delim-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .txt-delim {
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .txt-delim:hover { border-color: var(--accent); color: var(--text-primary); }
+  .txt-delim.active {
+    background: rgba(34, 208, 125, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .txt-columns {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .txt-col {
+    background: var(--bg-deep);
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+  }
+  .txt-col select {
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border: 1px solid var(--panel-border);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 3px 4px;
+    margin-top: 4px;
+    width: 100%;
+    cursor: pointer;
+  }
+  .txt-col-sample {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    margin-top: 2px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .txt-summary {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+  .txt-summary.error { color: var(--error); }
+  .txt-summary.ok { color: var(--accent); }
+
   /* ---------- Touch / mobil ---------- */
   /* Canvason ne triggereljen scroll/pinch-zoom alapból - mi kezeljük */
   #canvas {
@@ -1101,6 +1277,13 @@
     .color-modal {
       width: 92vw !important;
       max-width: 420px;
+    }
+    .txt-modal {
+      width: 94vw !important;
+      min-width: 0 !important;
+      max-width: 94vw !important;
+      max-height: 90vh;
+      overflow: auto;
     }
   }
 
@@ -1149,6 +1332,16 @@
     <div class="file-pill empty" id="file-pill">Nincs fájl betöltve</div>
   </div>
   <div class="header-actions">
+    <button class="header-btn" id="header-points" type="button" title="Pontok importálása TXT-ből">
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+        <circle cx="5" cy="5" r="1.8"/>
+        <circle cx="19" cy="5" r="1.8"/>
+        <circle cx="12" cy="12" r="1.8"/>
+        <circle cx="5" cy="19" r="1.8"/>
+        <circle cx="19" cy="19" r="1.8"/>
+      </svg>
+      Pontok
+    </button>
     <button class="header-btn primary" id="header-open" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/>
@@ -1184,7 +1377,33 @@
       <span class="info-toggle-chevron" aria-hidden="true">▾</span>
     </button>
     <div class="info-body" id="info-body">
-      <div class="subsection no-divider">
+      <div class="subsection no-divider sources-section" id="sources-section">
+        <div class="source-row" id="source-dxf-row">
+          <button class="layer-visibility" id="source-dxf-toggle" type="button" aria-pressed="false" aria-label="Háttér DXF ki/bekapcsolása" title="Háttér DXF ki/bekapcsolása">
+            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+          <span class="source-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </span>
+          <span class="source-label">Háttér DXF</span>
+          <span class="source-count" id="source-dxf-count">0</span>
+        </div>
+        <div class="source-row" id="source-points-row" hidden>
+          <button class="layer-visibility" id="source-points-toggle" type="button" aria-pressed="false" aria-label="Pontok ki/bekapcsolása" title="Pontok ki/bekapcsolása">
+            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+          <button class="layer-swatch" id="source-points-swatch" type="button" title="Pontok szín" aria-label="Pontok színének módosítása"></button>
+          <span class="source-label" id="source-points-label">Pontok</span>
+          <span class="source-count" id="source-points-count">0</span>
+          <button class="source-remove" id="source-points-remove" type="button" title="Pontok eltávolítása" aria-label="Pontok eltávolítása">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="subsection">
         <div class="subsection-head">
           <button class="layer-master-toggle" id="layer-master-toggle" type="button" aria-label="Összes réteg ki/bekapcsolása" title="Összes réteg ki/bekapcsolása">
             <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1239,6 +1458,50 @@
 
   <div class="error-toast" id="error-toast"></div>
 </main>
+
+<input type="file" id="txt-input" accept=".txt,.csv,.asc,.xyz,text/plain" hidden />
+
+<div class="color-modal-backdrop txt-modal-backdrop" id="txt-modal-backdrop" hidden>
+  <div class="color-modal txt-modal" role="dialog" aria-labelledby="txt-modal-title">
+    <div class="color-modal-header">
+      <div>
+        <span class="color-modal-title" id="txt-modal-title">Pontok importálása</span>
+        <span class="color-modal-layer-name" id="txt-modal-filename"></span>
+      </div>
+      <button class="color-modal-close" id="txt-modal-close" type="button" aria-label="Bezárás">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="txt-section">
+      <div class="txt-section-title">Előnézet (első 5 sor)</div>
+      <pre class="txt-preview" id="txt-preview"></pre>
+    </div>
+
+    <div class="txt-section">
+      <div class="txt-section-title">Elválasztó</div>
+      <div class="txt-delim-row" id="txt-delim-row" role="radiogroup">
+        <button type="button" class="txt-delim" data-delim="tab">Tab</button>
+        <button type="button" class="txt-delim" data-delim=";">Pontosvessző</button>
+        <button type="button" class="txt-delim" data-delim=" ">Szóköz</button>
+        <button type="button" class="txt-delim" data-delim=",">Vessző</button>
+      </div>
+    </div>
+
+    <div class="txt-section">
+      <div class="txt-section-title">Oszlop-hozzárendelés</div>
+      <div class="txt-columns" id="txt-columns"></div>
+      <div class="txt-summary" id="txt-summary"></div>
+    </div>
+
+    <div class="color-modal-footer">
+      <button class="color-modal-reset" id="txt-cancel" type="button">Mégse</button>
+      <button class="header-btn primary" id="txt-confirm" type="button" style="margin-left:auto">Betöltés</button>
+    </div>
+  </div>
+</div>
 
 <div class="color-modal-backdrop" id="color-modal-backdrop" hidden>
   <div class="color-modal" role="dialog" aria-labelledby="color-modal-title">
@@ -1746,17 +2009,59 @@ const hiddenLayers = new Set(); // kikapcsolt rétegek nevei
 const layerColorOverrides = {}; // user által módosított rétegszínek: name -> hex
 let textsVisible = true; // globális felirat-láthatóság
 
+// Pontok forrás: { fileName, points: [{n,x,y,z,code}], color, showLabels }
+let pointsData = null;
+let dxfVisible = true;    // háttér DXF láthatósága (független a pontoktól)
+let pointsVisible = true; // pontok láthatósága
+
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (dxfData) render();
+  if (dxfData || pointsData) render();
 }
 window.addEventListener('resize', resizeCanvas);
 
-function computeBounds(entities) {
+function computeCombinedBounds() {
+  // Egy bounding boxot ad a látható forrásokra (DXF + pontok).
+  // Eltol/zoom logika ezen alapul, és csak akkor változtatja a fit-et,
+  // ha valami valóban renderelhető.
+  let result = null;
+  if (dxfData && dxfVisible) {
+    result = computeBoundsOf(dxfData.entities);
+  }
+  if (pointsData && pointsVisible) {
+    const pb = computeBoundsOfPoints(pointsData.points);
+    result = mergeBounds(result, pb);
+  }
+  return result;
+}
+
+function computeBoundsOfPoints(points) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+  if (!isFinite(minX)) return null;
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+}
+
+function mergeBounds(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const minX = Math.min(a.minX, b.minX);
+  const minY = Math.min(a.minY, b.minY);
+  const maxX = Math.max(a.maxX, b.maxX);
+  const maxY = Math.max(a.maxY, b.maxY);
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+}
+
+function computeBoundsOf(entities) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   const expand = (x, y) => {
     if (x < minX) minX = x;
@@ -1845,12 +2150,17 @@ function render() {
   const rect = canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  if (!dxfData) return;
+  if (!dxfData && !pointsData) return;
 
   ctx.lineWidth = 1.2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
+  if (dxfData && dxfVisible) renderDxf();
+  if (pointsData && pointsVisible) renderPoints();
+}
+
+function renderDxf() {
   for (const e of dxfData.entities) {
     if (hiddenLayers.has(e.layer || '0')) continue;
     // Feliratok globális elrejtése
@@ -1925,6 +2235,38 @@ function render() {
         ctx.restore();
         break;
       }
+    }
+  }
+}
+
+// Pontfelhő rajzolása. Konstans pixelméretű marker + opcionális szám-felirat.
+function renderPoints() {
+  const color = (pointsData.color) || '#22D07D';
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  const r = 3.5; // pixel sugár
+  const showLabels = pointsData.showLabels && view.scale > 0.05;
+  const fontPx = 11;
+  if (showLabels) {
+    ctx.font = `${fontPx}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+  // Az LWPOLYLINE/LINE már beállította, de safe-en visszaállítjuk a beginPath-t pontonként
+  for (const p of pointsData.points) {
+    const s = worldToScreen(p.x, p.y);
+    // kereszt + kör jelzés (kis "pillangó" pont marker)
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(s.x - r * 2, s.y);
+    ctx.lineTo(s.x + r * 2, s.y);
+    ctx.moveTo(s.x, s.y - r * 2);
+    ctx.lineTo(s.x, s.y + r * 2);
+    ctx.stroke();
+    if (showLabels && p.n != null) {
+      ctx.fillText(String(p.n), s.x + r * 2 + 2, s.y - 2);
     }
   }
 }
@@ -2061,10 +2403,12 @@ function loadFile(file) {
       }
 
       dxfData = parsed;
-      bounds = computeBounds(parsed.entities);
+      dxfVisible = true;
+      bounds = computeCombinedBounds();
 
       document.getElementById('info-size').textContent = formatBytes(file.size);
       document.getElementById('info-entities').textContent = parsed.entities.length;
+      updateDxfSourceCount();
 
       // Rétegek: csak az aktívan használtakat számoljuk és listázzuk
       const layerUsage = {};
@@ -2403,6 +2747,11 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   hiddenLayers.clear();
   Object.keys(layerColorOverrides).forEach(k => delete layerColorOverrides[k]);
   textsVisible = true;
+  dxfVisible = true;
+  pointsData = null;
+  pointsVisible = true;
+  document.getElementById('source-points-row').hidden = true;
+  updateDxfSourceCount();
   fileInput.value = '';
   filePill.textContent = 'Nincs fájl betöltve';
   filePill.classList.add('empty');
@@ -2542,7 +2891,11 @@ function applyColor(hex) {
   if (!activeLayerForColor) return;
   const normalized = normalizeHex(hex);
   if (!normalized) return;
-  layerColorOverrides[activeLayerForColor] = normalized;
+  if (activeLayerForColor === '__points__') {
+    if (pointsData) pointsData.color = normalized;
+  } else {
+    layerColorOverrides[activeLayerForColor] = normalized;
+  }
   if (activeSwatchEl) activeSwatchEl.style.background = normalized;
   render();
   closeColorModal();
@@ -2584,11 +2937,16 @@ colorCustomHex.addEventListener('keydown', (e) => {
 
 document.getElementById('color-modal-reset').addEventListener('click', () => {
   if (!activeLayerForColor) return;
-  delete layerColorOverrides[activeLayerForColor];
-  // visszaállítjuk az eredeti szín swatch-ban
-  if (activeSwatchEl && dxfData) {
-    const layer = dxfData.layers[activeLayerForColor];
-    activeSwatchEl.style.background = (layer && layer.color) || '#FFB820';
+  if (activeLayerForColor === '__points__') {
+    if (pointsData) pointsData.color = DEFAULT_POINTS_COLOR;
+    if (activeSwatchEl) activeSwatchEl.style.background = DEFAULT_POINTS_COLOR;
+  } else {
+    delete layerColorOverrides[activeLayerForColor];
+    // visszaállítjuk az eredeti szín swatch-ban
+    if (activeSwatchEl && dxfData) {
+      const layer = dxfData.layers[activeLayerForColor];
+      activeSwatchEl.style.background = (layer && layer.color) || '#FFB820';
+    }
   }
   render();
   closeColorModal();
@@ -2689,7 +3047,354 @@ function buildEntityRow(label, count, isWarn) {
   return row;
 }
 
+/* =========================================================
+   TXT PONTOK IMPORTÁLÁSA
+   - Várt formátum: pontszám x y z kód  (tab / pontosvessző / szóköz / vessző)
+   - Az első 5 sor előnézet, a felhasználó kiválaszthatja az elválasztót
+     és átrendezheti az oszlop-szerepeket, ha az auto-detect nem találja el
+   ========================================================= */
+
+const txtInput = document.getElementById('txt-input');
+const txtModalBackdrop = document.getElementById('txt-modal-backdrop');
+const txtPreviewEl = document.getElementById('txt-preview');
+const txtFilenameEl = document.getElementById('txt-modal-filename');
+const txtDelimRow = document.getElementById('txt-delim-row');
+const txtColumnsEl = document.getElementById('txt-columns');
+const txtSummaryEl = document.getElementById('txt-summary');
+
+// Modal állapot: a betöltés alatti TXT-re
+let txtState = null; // { fileName, rawLines, delimiter, columnMap: string[] }
+
+const COL_ROLES = [
+  { key: 'n',    label: 'Pontszám' },
+  { key: 'x',    label: 'X' },
+  { key: 'y',    label: 'Y' },
+  { key: 'z',    label: 'Z' },
+  { key: 'code', label: 'Kód' },
+  { key: 'skip', label: '— kihagy —' },
+];
+
+const DEFAULT_POINTS_COLOR = '#22D07D';
+
+document.getElementById('header-points').addEventListener('click', () => txtInput.click());
+txtInput.addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (f) loadTxtFile(f);
+  // reset, hogy a következő ugyanaz a fájl is triggereljen change-et
+  txtInput.value = '';
+});
+
+function loadTxtFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const text = decodeTxtText(ev.target.result);
+      const allLines = text.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
+      if (allLines.length === 0) {
+        showError('A TXT fájl üres.');
+        return;
+      }
+      const delimiter = detectDelimiter(allLines.slice(0, 10));
+      const previewLines = allLines.slice(0, 5);
+      const sampleCols = splitLine(previewLines[0], delimiter);
+      const colCount = sampleCols.length;
+      // Auto-mapping: pontszám x y z kód
+      const defaults = ['n', 'x', 'y', 'z', 'code'];
+      const columnMap = [];
+      for (let i = 0; i < colCount; i++) {
+        columnMap.push(i < defaults.length ? defaults[i] : 'skip');
+      }
+      txtState = {
+        fileName: file.name,
+        allLines,
+        previewLines,
+        delimiter,
+        columnMap,
+      };
+      openTxtModal();
+    } catch (err) {
+      console.error(err);
+      showError('Hiba a TXT feldolgozásakor: ' + err.message);
+    }
+  };
+  reader.onerror = () => showError('A TXT fájlt nem sikerült beolvasni.');
+  reader.readAsArrayBuffer(file);
+}
+
+function decodeTxtText(buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(bytes.slice(3));
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch (_) {
+    // koordináta-fájlokban ritkán van non-ASCII, de a kód-mezőben lehet ékezet
+    return new TextDecoder('windows-1250').decode(bytes);
+  }
+}
+
+function detectDelimiter(lines) {
+  // A "legjobb" elválasztó az, amelyik a legtöbb sorban azonos pozitív
+  // oszlopszámot ad, ÉS legalább 3 oszlopot eredményez (x,y minimum).
+  const candidates = ['\t', ';', ',', ' '];
+  let best = '\t';
+  let bestScore = -1;
+  for (const d of candidates) {
+    const counts = lines.map(l => splitLine(l, d).length);
+    const min = Math.min(...counts);
+    const max = Math.max(...counts);
+    if (min < 3) continue; // legalább X, Y kell
+    const consistency = (min === max) ? 1 : 0;
+    const score = min * 10 + consistency * 5;
+    if (score > bestScore) { bestScore = score; best = d; }
+  }
+  return best;
+}
+
+function splitLine(line, delim) {
+  if (delim === ' ') {
+    // szóköz: whitespace runs (több szóköz egynek számít)
+    return line.trim().split(/\s+/);
+  }
+  return line.split(delim).map(s => s.trim());
+}
+
+function openTxtModal() {
+  txtFilenameEl.textContent = txtState.fileName;
+  renderTxtModal();
+  txtModalBackdrop.hidden = false;
+  requestAnimationFrame(() => txtModalBackdrop.classList.add('visible'));
+}
+
+function closeTxtModal() {
+  txtModalBackdrop.classList.remove('visible');
+  setTimeout(() => { txtModalBackdrop.hidden = true; }, 200);
+  txtState = null;
+}
+
+function renderTxtModal() {
+  // Előnézet (max 5 sor, monospace, tab tényleges tabként)
+  txtPreviewEl.textContent = txtState.previewLines.join('\n');
+
+  // Delimiter gombok
+  txtDelimRow.querySelectorAll('.txt-delim').forEach(btn => {
+    const d = btn.dataset.delim === 'tab' ? '\t' : btn.dataset.delim;
+    btn.classList.toggle('active', d === txtState.delimiter);
+  });
+
+  // Oszlopok dropdown-okkal
+  txtColumnsEl.innerHTML = '';
+  const sampleCols = splitLine(txtState.previewLines[0], txtState.delimiter);
+  for (let i = 0; i < sampleCols.length; i++) {
+    const col = document.createElement('div');
+    col.className = 'txt-col';
+    const idx = document.createElement('div');
+    idx.textContent = '#' + (i + 1);
+    col.appendChild(idx);
+    const sel = document.createElement('select');
+    for (const role of COL_ROLES) {
+      const opt = document.createElement('option');
+      opt.value = role.key;
+      opt.textContent = role.label;
+      if (role.key === txtState.columnMap[i]) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', () => {
+      txtState.columnMap[i] = sel.value;
+      validateTxtMapping();
+    });
+    col.appendChild(sel);
+    const sample = document.createElement('div');
+    sample.className = 'txt-col-sample';
+    sample.textContent = sampleCols[i] || '';
+    sample.title = sampleCols[i] || '';
+    col.appendChild(sample);
+    txtColumnsEl.appendChild(col);
+  }
+  validateTxtMapping();
+}
+
+function validateTxtMapping() {
+  const map = txtState.columnMap;
+  const hasX = map.includes('x');
+  const hasY = map.includes('y');
+  const confirmBtn = document.getElementById('txt-confirm');
+  if (!hasX || !hasY) {
+    txtSummaryEl.className = 'txt-summary error';
+    txtSummaryEl.textContent = 'Legalább X és Y oszlop kell.';
+    confirmBtn.disabled = true;
+    return;
+  }
+  // Próbaparse: hány sorból lesz érvényes pont
+  let valid = 0;
+  for (const line of txtState.allLines) {
+    const parts = splitLine(line, txtState.delimiter);
+    const p = mapColumnsToPoint(parts, map);
+    if (p && isFinite(p.x) && isFinite(p.y)) valid++;
+  }
+  txtSummaryEl.className = valid > 0 ? 'txt-summary ok' : 'txt-summary error';
+  txtSummaryEl.textContent = `Érvényes pontok: ${valid} / ${txtState.allLines.length}`;
+  confirmBtn.disabled = valid === 0;
+}
+
+function mapColumnsToPoint(parts, map) {
+  const p = { n: null, x: NaN, y: NaN, z: null, code: null };
+  for (let i = 0; i < map.length && i < parts.length; i++) {
+    const role = map[i];
+    if (role === 'skip') continue;
+    const val = parts[i];
+    if (role === 'x' || role === 'y' || role === 'z') {
+      const num = parseFloat((val || '').replace(',', '.'));
+      p[role] = num;
+    } else if (role === 'n') {
+      p.n = val;
+    } else if (role === 'code') {
+      p.code = val;
+    }
+  }
+  return p;
+}
+
+// Delimiter gomb kattintásra
+txtDelimRow.addEventListener('click', (e) => {
+  const btn = e.target.closest('.txt-delim');
+  if (!btn || !txtState) return;
+  txtState.delimiter = btn.dataset.delim === 'tab' ? '\t' : btn.dataset.delim;
+  // Új delim → új oszlopszám → újra-mappolás
+  const sampleCols = splitLine(txtState.previewLines[0], txtState.delimiter);
+  const defaults = ['n', 'x', 'y', 'z', 'code'];
+  txtState.columnMap = [];
+  for (let i = 0; i < sampleCols.length; i++) {
+    txtState.columnMap.push(i < defaults.length ? defaults[i] : 'skip');
+  }
+  renderTxtModal();
+});
+
+document.getElementById('txt-modal-close').addEventListener('click', closeTxtModal);
+document.getElementById('txt-cancel').addEventListener('click', closeTxtModal);
+txtModalBackdrop.addEventListener('click', (e) => {
+  if (e.target === txtModalBackdrop) closeTxtModal();
+});
+
+document.getElementById('txt-confirm').addEventListener('click', () => {
+  if (!txtState) return;
+  const points = [];
+  for (const line of txtState.allLines) {
+    const parts = splitLine(line, txtState.delimiter);
+    const p = mapColumnsToPoint(parts, txtState.columnMap);
+    if (p && isFinite(p.x) && isFinite(p.y)) points.push(p);
+  }
+  if (points.length === 0) {
+    showError('Nem sikerült érvényes pontot kiolvasni.');
+    return;
+  }
+  applyPoints({
+    fileName: txtState.fileName,
+    points,
+    color: (pointsData && pointsData.color) || DEFAULT_POINTS_COLOR,
+    showLabels: false,
+  });
+  closeTxtModal();
+});
+
+function applyPoints(data) {
+  pointsData = data;
+  pointsVisible = true;
+
+  // Source row beállítása
+  const row = document.getElementById('source-points-row');
+  row.hidden = false;
+  document.getElementById('source-points-label').textContent = data.fileName;
+  document.getElementById('source-points-label').title = data.fileName;
+  document.getElementById('source-points-count').textContent = data.points.length;
+  document.getElementById('source-points-swatch').style.background = data.color;
+  updateSourceToggleVisual('source-points-toggle', pointsVisible);
+
+  // Ha még nem volt rajzdata, ne legyen a panel rejtve - megmutatjuk a panelt és a kontrollokat
+  infoPanel.classList.add('visible');
+  controls.classList.add('visible');
+  dropzone.classList.add('hidden');
+
+  // Bounds frissítése és illesztés - ha nincs DXF, illesszünk a pontokra
+  bounds = computeCombinedBounds();
+  if (!dxfData) {
+    requestAnimationFrame(() => { resizeCanvas(); fitToView(); });
+  } else {
+    render();
+  }
+}
+
+function updateSourceToggleVisual(btnId, visible) {
+  const btn = document.getElementById(btnId);
+  const row = btn.closest('.source-row');
+  if (visible) {
+    row.classList.remove('hidden');
+    btn.setAttribute('aria-pressed', 'false');
+  } else {
+    row.classList.add('hidden');
+    btn.setAttribute('aria-pressed', 'true');
+  }
+}
+
+// Háttér DXF toggle
+document.getElementById('source-dxf-toggle').addEventListener('click', () => {
+  dxfVisible = !dxfVisible;
+  updateSourceToggleVisual('source-dxf-toggle', dxfVisible);
+  render();
+});
+
+// Pontok toggle
+document.getElementById('source-points-toggle').addEventListener('click', () => {
+  pointsVisible = !pointsVisible;
+  updateSourceToggleVisual('source-points-toggle', pointsVisible);
+  render();
+});
+
+// Pontok szín-módosítása (a meglévő color modal-on keresztül)
+document.getElementById('source-points-swatch').addEventListener('click', () => {
+  if (!pointsData) return;
+  // Speciális "layer name" érték a points színhez
+  activeLayerForColor = '__points__';
+  activeSwatchEl = document.getElementById('source-points-swatch');
+  document.getElementById('color-modal-layer-name').textContent = 'Pontok';
+  const currentColor = (pointsData.color || DEFAULT_POINTS_COLOR).toUpperCase();
+  document.getElementById('color-custom-picker').value = normalizeHex(currentColor) || DEFAULT_POINTS_COLOR;
+  document.getElementById('color-custom-hex').value = currentColor;
+  document.querySelectorAll('.color-cell').forEach(c => {
+    c.classList.toggle('selected', c.dataset.color.toUpperCase() === currentColor);
+  });
+  const backdrop = document.getElementById('color-modal-backdrop');
+  backdrop.hidden = false;
+  requestAnimationFrame(() => backdrop.classList.add('visible'));
+});
+
+// Pontok eltávolítása
+document.getElementById('source-points-remove').addEventListener('click', () => {
+  pointsData = null;
+  pointsVisible = true;
+  document.getElementById('source-points-row').hidden = true;
+  bounds = computeCombinedBounds();
+  render();
+});
+
+// Sources DXF count frissítése — a meglévő loadFile sikere után állítjuk be
+function updateDxfSourceCount() {
+  const el = document.getElementById('source-dxf-count');
+  if (!el) return;
+  el.textContent = dxfData ? dxfData.entities.length : 0;
+  // DXF row csak akkor látszik, ha van betöltött DXF
+  document.getElementById('source-dxf-row').hidden = !dxfData;
+  // Réteg + Entitás subsection szintén csak DXF-fel értelmes
+  const layerSec = document.querySelector('.layer-list')?.closest('.subsection');
+  const entSec = document.getElementById('entities-toggle')?.closest('.subsection');
+  if (layerSec) layerSec.hidden = !dxfData;
+  if (entSec) entSec.hidden = !dxfData;
+  updateSourceToggleVisual('source-dxf-toggle', dxfVisible);
+}
+
 // Init
+updateSourceToggleVisual('source-dxf-toggle', true);
 resizeCanvas();
 </script>
 
