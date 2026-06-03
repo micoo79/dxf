@@ -303,7 +303,7 @@
     margin-bottom: 24px;
   }
 
-  .drop-card label {
+  .drop-card .drop-import-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -317,15 +317,22 @@
     pointer-events: auto;
     border-radius: 4px;
     font-family: var(--font-body);
+    border: none;
   }
 
-  .drop-card label:hover {
+  .drop-card .drop-import-btn:hover {
     background: var(--accent-dark);
     color: var(--text-primary);
   }
 
   .drop-card input[type="file"] {
     display: none;
+  }
+
+  .header-btn-chevron {
+    width: 12px !important;
+    height: 12px !important;
+    opacity: 0.7;
   }
 
   /* ---------- Info panel ---------- */
@@ -1473,6 +1480,38 @@
   .popover-close svg { width: 12px; height: 12px; }
 
   .color-popover { width: 188px; }
+
+  /* Import menü a header gomb alatt */
+  .import-menu-popover {
+    width: 240px;
+    padding: 6px;
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-body);
+    transition: background 0.12s ease;
+  }
+  .menu-item:hover { background: var(--surface-2); }
+  .menu-item-icon {
+    width: 24px; height: 24px;
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .menu-item-icon svg { width: 18px; height: 18px; }
+  .menu-item-body { flex: 1; min-width: 0; }
+  .menu-item-title { font-size: 13px; font-weight: 500; }
+  .menu-item-desc { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
   .mini-color-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1728,21 +1767,16 @@
   </div>
   <div class="sources-strip" id="sources-strip" role="toolbar" aria-label="Betöltött források"></div>
   <div class="header-actions">
-    <button class="header-btn" id="header-points" type="button" title="Pontok importálása TXT-ből">
-      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
-        <circle cx="5" cy="5" r="1.8"/>
-        <circle cx="19" cy="5" r="1.8"/>
-        <circle cx="12" cy="12" r="1.8"/>
-        <circle cx="5" cy="19" r="1.8"/>
-        <circle cx="19" cy="19" r="1.8"/>
-      </svg>
-      Pontok
-    </button>
-    <button class="header-btn primary" id="header-open" type="button">
+    <button class="header-btn primary" id="header-import" type="button" title="Fájl importálása">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
-      Megnyitás
+      Importálás
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="header-btn-chevron" aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
     </button>
   </div>
 </header>
@@ -1760,10 +1794,10 @@
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
       </div>
-      <h2>DXF fájl betöltése</h2>
-      <p>Koppints vagy húzd ide a fájlt.<br/>Támogatott: ASCII DXF (LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE, POINT, TEXT, MTEXT, INSERT)</p>
-      <label for="file-input">Fájl tallózása</label>
-      <input type="file" id="file-input" accept=".dxf" />
+      <h2>Importálj fájlt</h2>
+      <p>Koppints vagy húzd ide a fájlt.<br/>Támogatott: ASCII DXF rajz és pontjegyzék (.txt, .csv, .asc, .xyz)</p>
+      <button class="drop-import-btn" id="drop-import" type="button">Importálás</button>
+      <input type="file" id="file-input" accept=".dxf" hidden />
     </div>
   </div>
 
@@ -1919,6 +1953,31 @@
       <button class="header-btn primary" id="txt-confirm" type="button" style="margin-left:auto">Betöltés</button>
     </div>
   </div>
+</div>
+
+<div class="popover import-menu-popover" id="import-menu" hidden>
+  <button class="menu-item" id="import-dxf" type="button">
+    <span class="menu-item-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </span>
+    <div class="menu-item-body">
+      <div class="menu-item-title">DXF rajz</div>
+      <div class="menu-item-desc">.dxf CAD rajz</div>
+    </div>
+  </button>
+  <button class="menu-item" id="import-txt" type="button">
+    <span class="menu-item-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <circle cx="5" cy="5" r="1.6"/><circle cx="19" cy="5" r="1.6"/>
+        <circle cx="12" cy="12" r="1.6"/>
+        <circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="19" r="1.6"/>
+      </svg>
+    </span>
+    <div class="menu-item-body">
+      <div class="menu-item-title">Pontjegyzék</div>
+      <div class="menu-item-desc">.txt .csv .asc .xyz koordináta-fájl</div>
+    </div>
+  </button>
 </div>
 
 <div class="popover color-popover" id="color-popover" hidden>
@@ -3090,7 +3149,48 @@ function formatBytes(b) {
 }
 
 fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
-document.getElementById('header-open').addEventListener('click', () => fileInput.click());
+// Import menü a header gombról
+function openImportMenu(anchorEl) {
+  closeActivePopover();
+  popoverTarget = { kind: 'menu' };
+  const pop = document.getElementById('import-menu');
+  positionPopover(pop, anchorEl);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+  activePopover = pop;
+  registerOutsideClose();
+}
+document.getElementById('header-import').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openImportMenu(e.currentTarget);
+});
+document.getElementById('import-dxf').addEventListener('click', () => {
+  closeActivePopover();
+  fileInput.click();
+});
+document.getElementById('import-txt').addEventListener('click', () => {
+  closeActivePopover();
+  txtInput.click();
+});
+// Dropzone gomb is ugyanezt nyitja
+document.getElementById('drop-import').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openImportMenu(e.currentTarget);
+});
+
+// Egy fájl kezelése a kiterjesztése alapján: DXF vagy pontjegyzék
+function dispatchFile(file) {
+  if (!file) return;
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.dxf')) {
+    loadFile(file);
+  } else if (name.endsWith('.txt') || name.endsWith('.csv') ||
+             name.endsWith('.asc') || name.endsWith('.xyz')) {
+    loadTxtFile(file);
+  } else {
+    // ismeretlen kiterjesztés - DXF-ként próbáljuk (a parser jelez hibát)
+    loadFile(file);
+  }
+}
 
 // Drag & drop az egész oldalra
 ['dragenter', 'dragover'].forEach(evt => {
@@ -3110,7 +3210,7 @@ document.addEventListener('drop', (e) => {
   e.preventDefault();
   document.body.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
-  if (file) loadFile(file);
+  if (file) dispatchFile(file);
 });
 
 /* =========================================================
@@ -3556,7 +3656,6 @@ const DEFAULT_POINTS_COLOR = '#22D07D';
 const TEXT_BASE_PX = 11;
 const MARKER_BASE_PX = 4;
 
-document.getElementById('header-points').addEventListener('click', () => txtInput.click());
 txtInput.addEventListener('change', (e) => {
   const f = e.target.files[0];
   if (f) loadTxtFile(f);
