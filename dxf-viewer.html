@@ -1816,8 +1816,8 @@
           </div>
           <div class="pp-slider-row" id="pp-num-size-row">
             <span class="pp-slider-label">Méret</span>
-            <input type="range" min="6" max="32" step="1" id="pp-num-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-num-size-val">11</span>
+            <input type="range" min="50" max="300" step="10" id="pp-num-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-num-size-val">100%</span>
           </div>
 
           <div class="pp-row">
@@ -1830,8 +1830,8 @@
           </div>
           <div class="pp-slider-row" id="pp-code-size-row">
             <span class="pp-slider-label">Méret</span>
-            <input type="range" min="6" max="32" step="1" id="pp-code-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-code-size-val">11</span>
+            <input type="range" min="50" max="300" step="10" id="pp-code-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-code-size-val">100%</span>
           </div>
 
           <div class="pp-row" id="pp-z-row">
@@ -1844,8 +1844,8 @@
           </div>
           <div class="pp-slider-row" id="pp-z-size-row">
             <span class="pp-slider-label">Méret</span>
-            <input type="range" min="6" max="32" step="1" id="pp-z-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-z-size-val">11</span>
+            <input type="range" min="50" max="300" step="10" id="pp-z-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-z-size-val">100%</span>
           </div>
 
           <div class="pp-row pp-marker-header">
@@ -1855,8 +1855,8 @@
           </div>
           <div class="pp-slider-row" id="pp-marker-size-row">
             <span class="pp-slider-label">Méret</span>
-            <input type="range" min="1" max="20" step="0.5" id="pp-marker-size" class="pp-slider" />
-            <span class="pp-slider-val" id="pp-marker-size-val">3.5</span>
+            <input type="range" min="25" max="400" step="10" id="pp-marker-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-marker-size-val">100%</span>
           </div>
         </div>
 
@@ -2728,13 +2728,15 @@ function renderDxf() {
 // kódú pontok kihagyva.
 function renderPointSource(src) {
   const markerColor = src.color || DEFAULT_POINTS_COLOR;
-  const r = src.markerSize || 3.5;
+  // A méretek %-ban tárolva; itt számoljuk át pixelre. Mivel pixelben rajzolunk,
+  // és a worldToScreen már elvégzi a transzformot, zoomolás nem növeli őket.
+  const r = MARKER_BASE_PX * ((src.markerSize || 100) / 100);
   const showNum = !!src.showNumber;
   const showCode = !!src.showCode;
   const showZ = !!src.showZ;
-  const numSize = src.numberSize || 11;
-  const codeSize = src.codeSize || 11;
-  const zSize = src.zSize || 11;
+  const numSize = TEXT_BASE_PX * ((src.numberSize || 100) / 100);
+  const codeSize = TEXT_BASE_PX * ((src.codeSize || 100) / 100);
+  const zSize = TEXT_BASE_PX * ((src.zSize || 100) / 100);
   const numColor = src.numberColor || markerColor;
   const codeColor = src.codeColor || markerColor;
   const zColor = src.zColor || markerColor;
@@ -3549,6 +3551,11 @@ const COL_ROLES = [
 
 const DEFAULT_POINTS_COLOR = '#22D07D';
 
+// Relatív méret bázisok: a slider 100%-a ezeket adja vissza pixelben.
+// A render pixel-egységben dolgozik, így zoomolás nem növeli őket.
+const TEXT_BASE_PX = 11;
+const MARKER_BASE_PX = 4;
+
 document.getElementById('header-points').addEventListener('click', () => txtInput.click());
 txtInput.addEventListener('change', (e) => {
   const f = e.target.files[0];
@@ -3784,10 +3791,11 @@ function applyPoints(data) {
     showNumber: false,
     showCode: false,
     showZ: false,
-    numberSize: 11,
-    codeSize: 11,
-    zSize: 11,
-    markerSize: 3.5,
+    // Méretek százalékos (relatív) értékben: 100% = TEXT_BASE_PX / MARKER_BASE_PX
+    numberSize: 100,
+    codeSize: 100,
+    zSize: 100,
+    markerSize: 100,
     markerShape: 'crossdot', // crossdot | circle | ring | plus | x
     // Per-attribútum színek (alapból mind = marker szín)
     numberColor: base,
@@ -3960,19 +3968,19 @@ function populatePointsPanel(src) {
   document.getElementById('pp-z-toggle').setAttribute('aria-pressed', src.showZ ? 'false' : 'true');
 
   document.getElementById('pp-num-size').value = src.numberSize;
-  document.getElementById('pp-num-size-val').textContent = src.numberSize;
+  document.getElementById('pp-num-size-val').textContent = src.numberSize + '%';
   numSizeRow.classList.toggle('disabled', !src.showNumber);
 
   document.getElementById('pp-code-size').value = src.codeSize;
-  document.getElementById('pp-code-size-val').textContent = src.codeSize;
+  document.getElementById('pp-code-size-val').textContent = src.codeSize + '%';
   codeSizeRow.classList.toggle('disabled', !src.showCode);
 
   document.getElementById('pp-z-size').value = src.zSize;
-  document.getElementById('pp-z-size-val').textContent = src.zSize;
+  document.getElementById('pp-z-size-val').textContent = src.zSize + '%';
   zSizeRow.classList.toggle('disabled', !src.showZ);
 
   document.getElementById('pp-marker-size').value = src.markerSize;
-  document.getElementById('pp-marker-size-val').textContent = src.markerSize;
+  document.getElementById('pp-marker-size-val').textContent = src.markerSize + '%';
 
   // Szín-swatch-ek
   document.getElementById('pp-num-color').style.background = src.numberColor || src.color;
@@ -4082,10 +4090,23 @@ function shapeSvg(shape) {
    POPOVER (helyben felugró) - szín- és alak-választó
    ========================================================= */
 const MINI_PALETTE = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#FFFF00',
-  '#9CDC1A', '#22D07D', '#17C2C2', '#3B9BFF',
-  '#5E5CE6', '#AF52DE', '#FF2D55', '#FFFFFF',
-  '#A9B4C2', '#728091', '#222C3A', '#000000',
+  // 8 fő szín × 2 árnyalat (világosabb pasztell + telítettebb pasztell), hue szerint sorba
+  // Vörös
+  '#FF8B8B', '#E64545',
+  // Narancs
+  '#FFAE70', '#F08825',
+  // Sárga
+  '#FAE07A', '#F0C525',
+  // Zöld
+  '#8FD3A4', '#33BF66',
+  // Cián
+  '#7FCED1', '#26B7BA',
+  // Kék
+  '#88B2E8', '#3F7DE0',
+  // Lila
+  '#B991D6', '#8E4FC4',
+  // Magenta / pink
+  '#DC8FC4', '#CC4FA8',
 ];
 const SHAPES = ['crossdot', 'circle', 'ring', 'plus', 'x'];
 
@@ -4259,7 +4280,7 @@ document.getElementById('pp-z-toggle').addEventListener('click', () => {
 document.getElementById('pp-z-size').addEventListener('input', (e) => {
   const src = getActivePointSource(); if (!src) return;
   src.zSize = parseFloat(e.target.value);
-  document.getElementById('pp-z-size-val').textContent = src.zSize;
+  document.getElementById('pp-z-size-val').textContent = src.zSize + '%';
   render();
 });
 
@@ -4298,19 +4319,19 @@ document.getElementById('pp-code-toggle').addEventListener('click', () => {
 document.getElementById('pp-num-size').addEventListener('input', (e) => {
   const src = getActivePointSource(); if (!src) return;
   src.numberSize = parseFloat(e.target.value);
-  document.getElementById('pp-num-size-val').textContent = src.numberSize;
+  document.getElementById('pp-num-size-val').textContent = src.numberSize + '%';
   render();
 });
 document.getElementById('pp-code-size').addEventListener('input', (e) => {
   const src = getActivePointSource(); if (!src) return;
   src.codeSize = parseFloat(e.target.value);
-  document.getElementById('pp-code-size-val').textContent = src.codeSize;
+  document.getElementById('pp-code-size-val').textContent = src.codeSize + '%';
   render();
 });
 document.getElementById('pp-marker-size').addEventListener('input', (e) => {
   const src = getActivePointSource(); if (!src) return;
   src.markerSize = parseFloat(e.target.value);
-  document.getElementById('pp-marker-size-val').textContent = src.markerSize;
+  document.getElementById('pp-marker-size-val').textContent = src.markerSize + '%';
   render();
 });
 
