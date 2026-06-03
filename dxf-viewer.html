@@ -2091,7 +2091,7 @@ let textsVisible = true; // globális felirat-láthatóság
 //   - dxfSource: { id:'dxf', kind:'dxf', name, visibility: 0|1|2 } vagy null
 //   - pointSources: lista [{ id, kind:'points', name, points, color, visibility }]
 //   - activeSourceId: 'dxf' | pointSource.id | null - csak egy lehet aktív
-// visibility: 0 = látható, 1 = 50% halvány, 2 = rejtett
+// visibility: 0 = látható, 1 = 25% halvány, 2 = rejtett
 let dxfSource = null;
 let pointSources = [];
 let activeSourceId = null;
@@ -2257,12 +2257,12 @@ function render() {
   ctx.lineJoin = 'round';
 
   if (dxfData && dxfSource && dxfSource.visibility !== 2) {
-    ctx.globalAlpha = dxfSource.visibility === 1 ? 0.5 : 1.0;
+    ctx.globalAlpha = dxfSource.visibility === 1 ? 0.25 : 1.0;
     renderDxf();
   }
   for (const ps of pointSources) {
     if (ps.visibility === 2) continue;
-    ctx.globalAlpha = ps.visibility === 1 ? 0.5 : 1.0;
+    ctx.globalAlpha = ps.visibility === 1 ? 0.25 : 1.0;
     renderPointSource(ps);
   }
   ctx.globalAlpha = 1.0;
@@ -3378,7 +3378,7 @@ function buildSourcePill(src) {
   const visBtn = document.createElement('button');
   visBtn.type = 'button';
   visBtn.className = 'pill-vis';
-  visBtn.title = 'Láthatóság (látható → 50% → rejtett)';
+  visBtn.title = 'Láthatóság (látható → 25% → rejtett)';
   visBtn.setAttribute('aria-label', 'Láthatóság');
   visBtn.innerHTML = ICON_VIS_ON + ICON_VIS_HALF + ICON_VIS_OFF;
   visBtn.addEventListener('click', (e) => {
