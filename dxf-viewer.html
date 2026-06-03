@@ -1363,6 +1363,102 @@
   .footer-btn:hover { border-color: var(--accent); color: var(--accent); }
   .footer-btn svg { width: 14px; height: 14px; }
 
+  /* ---------- Points panel (Pont adatok) ---------- */
+  .pp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 4px 0;
+  }
+  .pp-row .pp-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+  }
+  .pp-row .pp-toggle svg { width: 16px; height: 16px; }
+  .pp-row .pp-toggle .icon-off { display: none; }
+  .pp-row .pp-toggle[aria-pressed="true"] .icon-on { display: none; }
+  .pp-row .pp-toggle[aria-pressed="true"] .icon-off { display: block; }
+  .pp-row .pp-toggle[aria-pressed="true"] { color: var(--text-tertiary); }
+  .pp-label {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+  .pp-row[data-off="true"] .pp-label { color: var(--text-tertiary); }
+
+  .pp-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 4px 28px;
+  }
+  .pp-marker-row {
+    padding-left: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+  }
+  .pp-slider-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    min-width: 50px;
+  }
+  .pp-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    height: 24px;
+    margin: 0;
+    cursor: pointer;
+  }
+  .pp-slider::-webkit-slider-runnable-track {
+    height: 3px;
+    background: var(--panel-border);
+    border-radius: 2px;
+  }
+  .pp-slider::-moz-range-track {
+    height: 3px;
+    background: var(--panel-border);
+    border-radius: 2px;
+  }
+  .pp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: -5.5px;
+    border: 2px solid var(--bg-deep);
+    cursor: pointer;
+  }
+  .pp-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-deep);
+    cursor: pointer;
+  }
+  .pp-slider-val {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    min-width: 28px;
+    text-align: right;
+  }
+  .pp-slider-row.disabled .pp-slider-label,
+  .pp-slider-row.disabled .pp-slider-val { color: var(--text-disabled); }
+  .pp-slider-row.disabled .pp-slider { pointer-events: none; opacity: 0.4; }
+
   /* ---------- Touch / mobil ---------- */
   /* Canvason ne triggereljen scroll/pinch-zoom alapból - mi kezeljük */
   #canvas {
@@ -1495,30 +1591,72 @@
       <span class="info-toggle-chevron" aria-hidden="true">▾</span>
     </button>
     <div class="info-body" id="info-body">
-      <div class="subsection no-divider">
-        <div class="subsection-head">
-          <button class="layer-master-toggle" id="layer-master-toggle" type="button" aria-label="Összes réteg ki/bekapcsolása" title="Összes réteg ki/bekapcsolása">
-            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-          </button>
-          <span class="subsection-title">Rétegek</span>
-          <span class="subsection-count" id="info-layers">0</span>
-        </div>
-        <div class="layer-list" id="layer-list"></div>
+      <div id="dxf-panel">
+        <div class="subsection no-divider">
+          <div class="subsection-head">
+            <button class="layer-master-toggle" id="layer-master-toggle" type="button" aria-label="Összes réteg ki/bekapcsolása" title="Összes réteg ki/bekapcsolása">
+              <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+            <span class="subsection-title">Rétegek</span>
+            <span class="subsection-count" id="info-layers">0</span>
+          </div>
+          <div class="layer-list" id="layer-list"></div>
 
-        <div class="text-toggle-row" id="text-toggle-row" hidden>
-          <button class="layer-visibility text-master" id="text-master-toggle" type="button" aria-pressed="false" aria-label="Feliratok ki/bekapcsolása" title="Feliratok ki/bekapcsolása">
-            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-          </button>
-          <span class="text-toggle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-          </span>
-          <span class="text-toggle-label">Feliratok</span>
-          <span class="text-toggle-count" id="text-toggle-count">0</span>
+          <div class="text-toggle-row" id="text-toggle-row" hidden>
+            <button class="layer-visibility text-master" id="text-master-toggle" type="button" aria-pressed="false" aria-label="Feliratok ki/bekapcsolása" title="Feliratok ki/bekapcsolása">
+              <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+            <span class="text-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </span>
+            <span class="text-toggle-label">Feliratok</span>
+            <span class="text-toggle-count" id="text-toggle-count">0</span>
+          </div>
         </div>
       </div>
 
+      <div id="points-panel" hidden>
+        <div class="subsection no-divider">
+          <div class="subsection-head">
+            <span class="subsection-title">Pont adatok</span>
+            <span class="subsection-count" id="points-count">0</span>
+          </div>
+
+          <div class="pp-row">
+            <button class="layer-visibility pp-toggle" id="pp-num-toggle" type="button" aria-pressed="true" title="Pontszám ki/bekapcsolása">
+              <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+            <span class="pp-label">Pontszám</span>
+          </div>
+          <div class="pp-slider-row" id="pp-num-size-row">
+            <span class="pp-slider-label">Méret</span>
+            <input type="range" min="6" max="32" step="1" id="pp-num-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-num-size-val">11</span>
+          </div>
+
+          <div class="pp-row">
+            <button class="layer-visibility pp-toggle" id="pp-code-toggle" type="button" aria-pressed="true" title="Pontkód ki/bekapcsolása">
+              <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 4.1"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a9.9 9.9 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+            <span class="pp-label">Pontkód</span>
+          </div>
+          <div class="pp-slider-row" id="pp-code-size-row">
+            <span class="pp-slider-label">Méret</span>
+            <input type="range" min="6" max="32" step="1" id="pp-code-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-code-size-val">11</span>
+          </div>
+
+          <div class="pp-slider-row pp-marker-row">
+            <span class="pp-slider-label">Pontjel</span>
+            <input type="range" min="1" max="20" step="0.5" id="pp-marker-size" class="pp-slider" />
+            <span class="pp-slider-val" id="pp-marker-size-val">3.5</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2347,20 +2485,22 @@ function renderDxf() {
   }
 }
 
-// Pontfelhő rajzolása egy forrásból. Konstans pixelméretű marker + opcionális szám-felirat.
+// Pontfelhő rajzolása egy forrásból. A marker és a feliratok a forrás
+// (src.markerSize, src.showNumber, src.numberSize, src.showCode, src.codeSize)
+// beállításai szerint kerülnek ki.
 function renderPointSource(src) {
   const color = src.color || '#22D07D';
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  const r = 3.5; // pixel sugár
-  const showLabels = src.showLabels && view.scale > 0.05;
-  if (showLabels) {
-    ctx.font = `11px 'JetBrains Mono', monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-  }
+  const r = src.markerSize || 3.5;
+  const showNum = !!src.showNumber;
+  const showCode = !!src.showCode;
+  const numSize = src.numberSize || 11;
+  const codeSize = src.codeSize || 11;
+  const offset = r * 2 + 3; // szöveg-kezdő eltolás a markertől jobbra
   for (const p of src.points) {
     const s = worldToScreen(p.x, p.y);
+    // Marker: kis kör + kereszt
     ctx.beginPath();
     ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -2370,8 +2510,18 @@ function renderPointSource(src) {
     ctx.moveTo(s.x, s.y - r * 2);
     ctx.lineTo(s.x, s.y + r * 2);
     ctx.stroke();
-    if (showLabels && p.n != null) {
-      ctx.fillText(String(p.n), s.x + r * 2 + 2, s.y - 2);
+    // Pontszám fölé, pontkód alá (a marker jobb oldalán)
+    if (showNum && p.n != null) {
+      ctx.font = `${numSize}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(String(p.n), s.x + offset, s.y - 2);
+    }
+    if (showCode && p.code != null && p.code !== '') {
+      ctx.font = `${codeSize}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(String(p.code), s.x + offset, s.y + 2);
     }
   }
 }
@@ -2557,6 +2707,7 @@ function loadFile(file) {
       dropzone.classList.add('hidden');
       infoPanel.classList.add('visible');
       rebuildSourcesStrip();
+      refreshActivePanel();
 
       requestAnimationFrame(() => {
         resizeCanvas();
@@ -3330,7 +3481,12 @@ function applyPoints(data) {
     points: data.points,
     color: data.color || DEFAULT_POINTS_COLOR,
     visibility: 0,
-    showLabels: false,
+    // Per-source megjelenítési beállítások (a "Pont adatok" panel állítja):
+    showNumber: false,
+    showCode: false,
+    numberSize: 11,
+    codeSize: 11,
+    markerSize: 3.5,
   };
   pointSources.push(src);
   activeSourceId = id;
@@ -3341,6 +3497,7 @@ function applyPoints(data) {
 
   bounds = computeCombinedBounds();
   rebuildSourcesStrip();
+  refreshActivePanel();
   if (!dxfData && pointSources.length === 1) {
     requestAnimationFrame(() => { resizeCanvas(); fitToView(); });
   } else {
@@ -3442,7 +3599,105 @@ function setActiveSource(id) {
   sourcesStrip.querySelectorAll('.source-pill').forEach(p => {
     p.classList.toggle('active', p.dataset.id === id);
   });
+  refreshActivePanel();
 }
+
+/* =========================================================
+   ACTIVE-PANEL: "Rajz adatok" → az aktív forrás vezérlőit mutatja
+   ========================================================= */
+function refreshActivePanel() {
+  const src = getSourceById(activeSourceId);
+  const dxfPanel = document.getElementById('dxf-panel');
+  const pointsPanel = document.getElementById('points-panel');
+  const label = document.querySelector('.info-toggle-label');
+  if (!src) {
+    // Nincs aktív forrás: panel marad rejtve a kívülről irányítva (info-panel.visible)
+    return;
+  }
+  if (src.kind === 'dxf') {
+    dxfPanel.hidden = false;
+    pointsPanel.hidden = true;
+    if (label) label.textContent = 'Rajz adatok';
+  } else if (src.kind === 'points') {
+    dxfPanel.hidden = true;
+    pointsPanel.hidden = false;
+    if (label) label.textContent = 'Pont adatok';
+    populatePointsPanel(src);
+  }
+}
+
+function populatePointsPanel(src) {
+  document.getElementById('points-count').textContent = src.points.length;
+
+  const hasNumbers = src.points.some(p => p.n != null);
+  const hasCodes = src.points.some(p => p.code != null && p.code !== '');
+
+  const numRow = document.getElementById('pp-num-toggle').closest('.pp-row');
+  const numSizeRow = document.getElementById('pp-num-size-row');
+  const codeRow = document.getElementById('pp-code-toggle').closest('.pp-row');
+  const codeSizeRow = document.getElementById('pp-code-size-row');
+  numRow.hidden = !hasNumbers;
+  numSizeRow.hidden = !hasNumbers;
+  codeRow.hidden = !hasCodes;
+  codeSizeRow.hidden = !hasCodes;
+
+  // aria-pressed='true' = REJTETT, 'false' = LÁTHATÓ (a meglévő layer-visibility minta)
+  const numToggle = document.getElementById('pp-num-toggle');
+  numToggle.setAttribute('aria-pressed', src.showNumber ? 'false' : 'true');
+  const codeToggle = document.getElementById('pp-code-toggle');
+  codeToggle.setAttribute('aria-pressed', src.showCode ? 'false' : 'true');
+
+  const numSize = document.getElementById('pp-num-size');
+  numSize.value = src.numberSize;
+  document.getElementById('pp-num-size-val').textContent = src.numberSize;
+  numSizeRow.classList.toggle('disabled', !src.showNumber);
+
+  const codeSize = document.getElementById('pp-code-size');
+  codeSize.value = src.codeSize;
+  document.getElementById('pp-code-size-val').textContent = src.codeSize;
+  codeSizeRow.classList.toggle('disabled', !src.showCode);
+
+  const marker = document.getElementById('pp-marker-size');
+  marker.value = src.markerSize;
+  document.getElementById('pp-marker-size-val').textContent = src.markerSize;
+}
+
+// Aktuálisan aktív point forrást adja vissza, ha az aktív kind 'points'.
+function getActivePointSource() {
+  const src = getSourceById(activeSourceId);
+  return src && src.kind === 'points' ? src : null;
+}
+
+document.getElementById('pp-num-toggle').addEventListener('click', () => {
+  const src = getActivePointSource(); if (!src) return;
+  src.showNumber = !src.showNumber;
+  populatePointsPanel(src);
+  render();
+});
+document.getElementById('pp-code-toggle').addEventListener('click', () => {
+  const src = getActivePointSource(); if (!src) return;
+  src.showCode = !src.showCode;
+  populatePointsPanel(src);
+  render();
+});
+document.getElementById('pp-num-size').addEventListener('input', (e) => {
+  const src = getActivePointSource(); if (!src) return;
+  src.numberSize = parseFloat(e.target.value);
+  document.getElementById('pp-num-size-val').textContent = src.numberSize;
+  render();
+});
+document.getElementById('pp-code-size').addEventListener('input', (e) => {
+  const src = getActivePointSource(); if (!src) return;
+  src.codeSize = parseFloat(e.target.value);
+  document.getElementById('pp-code-size-val').textContent = src.codeSize;
+  render();
+});
+document.getElementById('pp-marker-size').addEventListener('input', (e) => {
+  const src = getActivePointSource(); if (!src) return;
+  src.markerSize = parseFloat(e.target.value);
+  document.getElementById('pp-marker-size-val').textContent = src.markerSize;
+  render();
+});
 
 function removeSource(id) {
   if (id === 'dxf') return; // DXF eltávolítását nem itt kezeljük (Megnyitás cseréli)
@@ -3452,6 +3707,7 @@ function removeSource(id) {
   }
   bounds = computeCombinedBounds();
   rebuildSourcesStrip();
+  refreshActivePanel();
   render();
 }
 
