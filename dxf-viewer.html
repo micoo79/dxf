@@ -3422,6 +3422,7 @@ let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 
 canvas.addEventListener('mousedown', (e) => {
+  if (drawMode) return; // rajz módban a pointerdown kezel mindent
   isDragging = true;
   dragStart = { x: e.clientX - view.x, y: e.clientY - view.y };
 });
@@ -3432,7 +3433,7 @@ canvas.addEventListener('mousemove', (e) => {
   const sx = e.clientX - rect.left;
   const sy = e.clientY - rect.top;
 
-  if (isDragging && hasAnyData()) {
+  if (isDragging && hasAnyData() && !drawMode) {
     view.x = e.clientX - dragStart.x;
     view.y = e.clientY - dragStart.y;
     render();
@@ -3471,6 +3472,8 @@ function getTouchPos(t) {
 
 canvas.addEventListener('touchstart', (e) => {
   if (!hasAnyData()) return;
+  // 1-ujjas érintés rajz módban: pointerdown intézi, ne induljon pan
+  if (drawMode && e.touches.length === 1) return;
   if (e.touches.length === 1) {
     const p = getTouchPos(e.touches[0]);
     touchState = {
