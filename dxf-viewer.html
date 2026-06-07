@@ -335,24 +335,59 @@
   }
 
   /* ---------- Info panel ---------- */
+  /* ---------- Right-side floating dock + slide-out panels ---------- */
+  .right-dock {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 50;
+  }
+  .dock-btn {
+    width: 40px;
+    height: 40px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+  }
+  .dock-btn svg { width: 20px; height: 20px; stroke-width: 1.6; }
+  .dock-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .dock-btn.open,
+  .dock-btn.active {
+    background: var(--accent);
+    color: var(--bg-deep);
+    border-color: var(--accent);
+  }
+
+  /* Slide-out panels - a jobb dockból nyílnak balra */
   .info-panel {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 12px;
+    right: 64px;
+    bottom: 12px;
     background: var(--surface-1);
     border: 1px solid var(--panel-border);
     padding: 14px 16px;
-    min-width: 280px;
-    max-width: 320px;
+    width: 290px;
     font-size: 12px;
     opacity: 0;
     transform: translateX(20px);
-    transition: all 0.3s ease;
+    transition: opacity 0.22s ease, transform 0.22s ease;
     pointer-events: none;
     border-radius: 6px;
-    overflow: hidden;
+    overflow: auto;
+    z-index: 45;
   }
-
   .info-panel.visible {
     opacity: 1;
     transform: translateX(0);
@@ -411,6 +446,109 @@
     max-height: 0;
     opacity: 0;
   }
+
+  /* Snap panel - ugyanaz a slide-out viselkedés */
+  .snap-panel-out {
+    position: absolute;
+    top: 12px;
+    right: 64px;
+    bottom: 12px;
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    padding: 14px 16px;
+    width: 290px;
+    font-size: 12px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+    border-radius: 6px;
+    overflow: auto;
+    z-index: 45;
+  }
+  .snap-panel-out.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .snap-panel-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-secondary);
+    padding: 0 0 10px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .snap-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--panel-border); }
+  .snap-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .snap-section-title {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-tertiary); margin-bottom: 10px;
+  }
+  .snap-opt { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+  .snap-opt .glyph { width: 20px; height: 20px; flex-shrink: 0; }
+  .snap-opt .nm { flex: 1; font-size: 12.5px; color: var(--text-secondary); }
+  .snap-opt.on .nm { color: var(--text-primary); }
+  .snap-opt .sw-toggle {
+    width: 36px; height: 20px; border-radius: 11px;
+    background: var(--surface-3); border: 1px solid var(--panel-border);
+    position: relative; flex-shrink: 0; transition: all 0.15s ease;
+  }
+  .snap-opt .sw-toggle::after {
+    content: ''; position: absolute; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--text-tertiary);
+    top: 2px; left: 2px; transition: all 0.15s ease;
+  }
+  .snap-opt.on .sw-toggle { background: rgba(34, 208, 125, 0.15); border-color: var(--accent); }
+  .snap-opt.on .sw-toggle::after { background: var(--accent); left: calc(100% - 16px); }
+
+  .snap-slider-row { padding: 6px 0; }
+  .snap-slider-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .snap-slider-k { font-size: 12px; color: var(--text-secondary); }
+  .snap-slider-v { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .snap-slider-row input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 2px;
+    background: var(--surface-3); outline: none;
+    margin: 0;
+  }
+  .snap-slider-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent);
+    border: 2px solid var(--bg-deep); cursor: pointer;
+  }
+  .snap-slider-row input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg-deep); cursor: pointer;
+  }
+
+  /* Rajz akció gombok */
+  .draw-actions {
+    position: absolute;
+    left: 50%; bottom: 56px;
+    transform: translateX(-50%);
+    display: flex; gap: 6px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 30;
+  }
+  .draw-actions.show { opacity: 1; pointer-events: auto; }
+  .da-btn {
+    height: 38px; padding: 0 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface-1); border: 1px solid var(--panel-border);
+    border-radius: 8px; font-family: var(--font-body);
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .da-btn:hover { color: var(--text-primary); border-color: var(--accent); }
+  .da-btn:active { transform: scale(0.96); }
+  .da-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .da-btn.finish { border-color: var(--accent); color: var(--accent); }
 
   /* ---------- Subsection (rétegek + entitások) ---------- */
   .subsection {
@@ -1899,6 +2037,79 @@
   </div>
 
   <div class="error-toast" id="error-toast"></div>
+
+  <!-- Rajz akció pillek (Vissza / Lezárás) - csak draw módban + ha van aktív lánc -->
+  <div class="draw-actions" id="draw-actions">
+    <button class="da-btn" id="da-undo" type="button">
+      <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      Visszavonás
+    </button>
+    <button class="da-btn finish" id="da-finish" type="button">
+      <svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>
+      Lezárás
+    </button>
+  </div>
+
+  <!-- Snap beállítások panel (slide-out a dockból) -->
+  <aside class="snap-panel-out" id="snap-panel-out">
+    <div class="snap-panel-title">Snap beállítások</div>
+
+    <div class="snap-section">
+      <div class="snap-section-title">Tárgyraszter módok</div>
+      <div class="snap-opt on" data-snap="endpoint">
+        <svg class="glyph" viewBox="0 0 22 22"><rect x="5" y="5" width="12" height="12" fill="none" stroke="#ff6b35" stroke-width="2"/></svg>
+        <span class="nm">Végpont</span><div class="sw-toggle"></div>
+      </div>
+      <div class="snap-opt on" data-snap="midpoint">
+        <svg class="glyph" viewBox="0 0 22 22"><path d="M11 4L19 18H3z" fill="none" stroke="#38bdf8" stroke-width="2"/></svg>
+        <span class="nm">Felezőpont</span><div class="sw-toggle"></div>
+      </div>
+      <div class="snap-opt on" data-snap="center">
+        <svg class="glyph" viewBox="0 0 22 22"><circle cx="11" cy="11" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><circle cx="11" cy="11" r="1.5" fill="#4ade80"/></svg>
+        <span class="nm">Középpont</span><div class="sw-toggle"></div>
+      </div>
+      <div class="snap-opt on" data-snap="intersection">
+        <svg class="glyph" viewBox="0 0 22 22"><path d="M4 4l14 14M18 4L4 18" stroke="#facc15" stroke-width="2"/></svg>
+        <span class="nm">Metszéspont</span><div class="sw-toggle"></div>
+      </div>
+    </div>
+
+    <div class="snap-section">
+      <div class="snap-section-title">Érintés-precízió</div>
+      <div class="snap-slider-row">
+        <div class="snap-slider-head"><span class="snap-slider-k">Kurzor-eltolás</span><span class="snap-slider-v" id="snap-off-v">0 px</span></div>
+        <input type="range" id="snap-off-r" min="0" max="120" value="0">
+      </div>
+      <div class="snap-slider-row">
+        <div class="snap-slider-head"><span class="snap-slider-k">Mágnes sugár</span><span class="snap-slider-v" id="snap-mag-v">22 px</span></div>
+        <input type="range" id="snap-mag-r" min="8" max="60" value="22">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Jobb oldali lebegő dock - 3 ikon -->
+  <div class="right-dock">
+    <button class="dock-btn" id="dock-snap" type="button" title="Snap beállítások" aria-label="Snap beállítások">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      </svg>
+    </button>
+    <button class="dock-btn" id="dock-layers" type="button" title="Rétegek / Tulajdonságok" aria-label="Rétegek és tulajdonságok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l9 5-9 5-9-5z"/>
+        <path d="M3 13l9 5 9-5"/>
+        <path d="M3 18l9 5 9-5"/>
+      </svg>
+    </button>
+    <button class="dock-btn" id="dock-draw" type="button" title="Vonal rajzolás" aria-label="Vonal rajzolás">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 20L20 4"/>
+        <circle cx="4" cy="20" r="1.6" fill="currentColor"/>
+        <circle cx="20" cy="4" r="1.6" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
 </main>
 
 <input type="file" id="txt-input" accept=".txt,.csv,.asc,.xyz,text/plain" hidden />
@@ -3055,7 +3266,6 @@ function loadFile(file) {
       }
 
       dropzone.classList.add('hidden');
-      infoPanel.classList.add('visible');
       rebuildSourcesStrip();
       refreshActivePanel();
 
@@ -3894,8 +4104,7 @@ function applyPoints(data) {
   pointSources.push(src);
   activeSourceId = id;
 
-  // Panel megmutatása (pontfájlnál is, ne csak DXF-nél), dropzone elrejtése
-  infoPanel.classList.add('visible');
+  // Dropzone elrejtése - a panelek a jobb dock-ikonokról bukkannak elő
   dropzone.classList.add('hidden');
 
   bounds = computeCombinedBounds();
@@ -4425,7 +4634,442 @@ function openPointColorModal(src, swatchEl) {
   backdrop.hidden = false;
   requestAnimationFrame(() => backdrop.classList.add('visible'));
 }
+/* =========================================================
+   JOBB DOCK + SLIDE-OUT PANELEK
+   ========================================================= */
+const dockSnapBtn = document.getElementById('dock-snap');
+const dockLayersBtn = document.getElementById('dock-layers');
+const dockDrawBtn = document.getElementById('dock-draw');
+const snapPanelEl = document.getElementById('snap-panel-out');
+
+function closeAllPanels() {
+  infoPanel.classList.remove('visible');
+  snapPanelEl.classList.remove('visible');
+  dockSnapBtn.classList.remove('open');
+  dockLayersBtn.classList.remove('open');
+}
+dockSnapBtn.addEventListener('click', () => {
+  const wasOpen = snapPanelEl.classList.contains('visible');
+  closeAllPanels();
+  if (!wasOpen) { snapPanelEl.classList.add('visible'); dockSnapBtn.classList.add('open'); }
+});
+dockLayersBtn.addEventListener('click', () => {
+  if (!hasAnyData()) return; // nincs mit mutatni
+  const wasOpen = infoPanel.classList.contains('visible');
+  closeAllPanels();
+  if (!wasOpen) { infoPanel.classList.add('visible'); dockLayersBtn.classList.add('open'); }
+});
+
+/* =========================================================
+   SNAP BEÁLLÍTÁSOK + ENGINE
+   ========================================================= */
+const SNAP = {
+  endpoint: true, midpoint: true, center: true, intersection: true,
+  offset: 0, magnet: 22,
+};
+const SNAP_COLORS = { endpoint: '#ff6b35', midpoint: '#38bdf8', center: '#4ade80', intersection: '#facc15' };
+const SNAP_NAMES = { endpoint: 'Végpont', midpoint: 'Felezőpont', center: 'Középpont', intersection: 'Metszéspont' };
+
+document.querySelectorAll('.snap-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    opt.classList.toggle('on');
+    SNAP[opt.dataset.snap] = opt.classList.contains('on');
+  });
+});
+document.getElementById('snap-off-r').addEventListener('input', e => {
+  SNAP.offset = +e.target.value;
+  document.getElementById('snap-off-v').textContent = SNAP.offset + ' px';
+});
+document.getElementById('snap-mag-r').addEventListener('input', e => {
+  SNAP.magnet = +e.target.value;
+  document.getElementById('snap-mag-v').textContent = SNAP.magnet + ' px';
+});
+
+// Snap-jelöltek világkoordinátában. Újraépítjük amikor a forrás-állomány változik.
+let snapCandidates = [];
+function rebuildSnapCandidates() {
+  snapCandidates = [];
+  if (dxfData && dxfSource && dxfSource.visibility !== 2) {
+    for (const e of dxfData.entities) {
+      if (hiddenLayers.has(e.layer || '0')) continue;
+      switch (e.type) {
+        case 'LINE':
+          snapCandidates.push({ x: e.x1, y: e.y1, t: 'endpoint' });
+          snapCandidates.push({ x: e.x2, y: e.y2, t: 'endpoint' });
+          snapCandidates.push({ x: (e.x1 + e.x2) / 2, y: (e.y1 + e.y2) / 2, t: 'midpoint' });
+          break;
+        case 'CIRCLE':
+        case 'ARC':
+          snapCandidates.push({ x: e.x1, y: e.y1, t: 'center' });
+          break;
+        case 'POINT':
+          snapCandidates.push({ x: e.x1, y: e.y1, t: 'endpoint' });
+          break;
+        case 'LWPOLYLINE':
+        case 'POLYLINE':
+          if (e.vertices && e.vertices.length) {
+            for (let i = 0; i < e.vertices.length; i++) {
+              snapCandidates.push({ x: e.vertices[i].x, y: e.vertices[i].y, t: 'endpoint' });
+              if (i > 0) {
+                const a = e.vertices[i - 1], b = e.vertices[i];
+                snapCandidates.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, t: 'midpoint' });
+              }
+            }
+          }
+          break;
+      }
+    }
+  }
+  for (const src of pointSources) {
+    if (src.visibility === 2) continue;
+    for (const p of src.points) snapCandidates.push({ x: p.x, y: p.y, t: 'endpoint' });
+  }
+  for (const [ax, ay, bx, by] of drawSegments) {
+    snapCandidates.push({ x: ax, y: ay, t: 'endpoint' });
+    snapCandidates.push({ x: bx, y: by, t: 'endpoint' });
+    snapCandidates.push({ x: (ax + bx) / 2, y: (ay + by) / 2, t: 'midpoint' });
+  }
+  for (const p of drawChain) snapCandidates.push({ x: p.x, y: p.y, t: 'endpoint' });
+}
+
+// Metszéspont csak draw módban, drága
+function intersectionsNearby(screenX, screenY, radius) {
+  const intersections = [];
+  if (!dxfData) return intersections;
+  const segments = [];
+  for (const e of dxfData.entities) {
+    if (hiddenLayers.has(e.layer || '0')) continue;
+    if (e.type === 'LINE') segments.push([e.x1, e.y1, e.x2, e.y2]);
+    else if ((e.type === 'LWPOLYLINE' || e.type === 'POLYLINE') && e.vertices) {
+      for (let i = 1; i < e.vertices.length; i++)
+        segments.push([e.vertices[i-1].x, e.vertices[i-1].y, e.vertices[i].x, e.vertices[i].y]);
+    }
+  }
+  for (const [ax, ay, bx, by] of drawSegments) segments.push([ax, ay, bx, by]);
+  for (let i = 0; i < segments.length; i++) {
+    for (let j = i + 1; j < segments.length; j++) {
+      const p = segLineIntersection(segments[i], segments[j]);
+      if (!p) continue;
+      const s = worldToScreen(p.x, p.y);
+      if (Math.hypot(s.x - screenX, s.y - screenY) < radius) {
+        intersections.push({ x: p.x, y: p.y, t: 'intersection' });
+      }
+    }
+  }
+  return intersections;
+}
+function segLineIntersection([ax, ay, bx, by], [cx, cy, dx, dy]) {
+  const d = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+  if (Math.abs(d) < 1e-9) return null;
+  const t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / d;
+  const u = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / d;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: ax + t * (bx - ax), y: ay + t * (by - ay) };
+}
+
+function findSnap(screenX, screenY) {
+  let best = null, bestD = SNAP.magnet;
+  for (const c of snapCandidates) {
+    if (!SNAP[c.t]) continue;
+    const s = worldToScreen(c.x, c.y);
+    const d = Math.hypot(s.x - screenX, s.y - screenY);
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  if (SNAP.intersection) {
+    const ints = intersectionsNearby(screenX, screenY, SNAP.magnet);
+    for (const it of ints) {
+      const s = worldToScreen(it.x, it.y);
+      const d = Math.hypot(s.x - screenX, s.y - screenY);
+      if (d < bestD) { bestD = d; best = it; }
+    }
+  }
+  return best;
+}
+
+/* =========================================================
+   RAJZOLÁS — vonal-lánc, snap, kurzor-eltolás (tabletre)
+   ========================================================= */
+let drawMode = false;
+let drawChain = [];       // aktív polyline csúcsai világban
+let drawSegments = [];    // lezárt szakaszok [ax,ay,bx,by] világban
+let drawFinger = null;    // raw ujj képernyő-koord
+let drawCursor = null;    // eltolt kurzor képernyő-koord
+let drawSnapped = null;   // világbeli snap-target
+let drawDownT = 0, drawDownX = 0, drawDownY = 0;
+let drawLastTapT = 0, drawLastTapX = 0, drawLastTapY = 0;
+let drawPointerType = 'mouse';
+
+const drawActions = document.getElementById('draw-actions');
+
+dockDrawBtn.addEventListener('click', () => {
+  drawMode = !drawMode;
+  dockDrawBtn.classList.toggle('active', drawMode);
+  canvas.style.cursor = drawMode ? 'crosshair' : 'grab';
+  drawFinger = null; drawCursor = null; drawSnapped = null;
+  updateDrawActions();
+  render();
+});
+
+function updateDrawActions() {
+  const show = drawMode && (drawChain.length > 0 || drawSegments.length > 0);
+  drawActions.classList.toggle('show', show);
+}
+
+function getCanvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!drawMode) return;
+  canvas.setPointerCapture(e.pointerId);
+  drawPointerType = e.pointerType || 'mouse';
+  drawDownT = performance.now();
+  drawDownX = e.clientX; drawDownY = e.clientY;
+  updateDrawFinger(e);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drawMode || !drawFinger) return;
+  updateDrawFinger(e);
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (!drawMode || !drawFinger) return;
+  const now = performance.now();
+  const dur = now - drawDownT;
+  const moved = Math.hypot(e.clientX - drawDownX, e.clientY - drawDownY);
+  const isTap = dur < 250 && moved < 10;
+
+  if (isTap) {
+    const isDouble = (now - drawLastTapT < 400) &&
+                     Math.hypot(e.clientX - drawLastTapX, e.clientY - drawLastTapY) < 40;
+    drawLastTapT = now; drawLastTapX = e.clientX; drawLastTapY = e.clientY;
+    if (isDouble && drawChain.length) {
+      drawChain = [];
+      rebuildSnapCandidates(); updateDrawActions();
+      drawLastTapT = 0;
+    }
+    drawFinger = null; drawCursor = null; drawSnapped = null;
+    render();
+    return;
+  }
+
+  // Húzás + felengedés: pontot rögzít
+  const w = drawSnapped
+    ? { x: drawSnapped.x, y: drawSnapped.y }
+    : screenToWorld(drawCursor.x, drawCursor.y);
+  if (drawChain.length) {
+    const prev = drawChain[drawChain.length - 1];
+    if (Math.hypot(w.x - prev.x, w.y - prev.y) > 1e-6) {
+      drawSegments.push([prev.x, prev.y, w.x, w.y]);
+      drawChain.push(w);
+    }
+  } else {
+    drawChain.push(w);
+  }
+  rebuildSnapCandidates();
+  updateDrawActions();
+  drawFinger = null; drawCursor = null; drawSnapped = null;
+  render();
+});
+
+function updateDrawFinger(e) {
+  drawFinger = getCanvasPos(e);
+  // Touch: kurzor az ujj fölé csúsztatva, hogy ne takarja az ujj
+  const useOffset = drawPointerType === 'touch' && SNAP.offset > 0;
+  if (useOffset) {
+    const above = drawFinger.y > SNAP.offset + 20;
+    drawCursor = { x: drawFinger.x, y: drawFinger.y + (above ? -SNAP.offset : SNAP.offset) };
+  } else {
+    drawCursor = { x: drawFinger.x, y: drawFinger.y };
+  }
+  drawSnapped = findSnap(drawCursor.x, drawCursor.y);
+  render();
+}
+
+document.getElementById('da-undo').addEventListener('click', () => {
+  if (drawChain.length > 1) {
+    drawChain.pop();
+    drawSegments.pop();
+  } else if (drawChain.length === 1) {
+    drawChain = [];
+  } else if (drawSegments.length) {
+    drawSegments.pop();
+  }
+  rebuildSnapCandidates();
+  updateDrawActions();
+  render();
+});
+document.getElementById('da-finish').addEventListener('click', () => {
+  drawChain = [];
+  rebuildSnapCandidates();
+  updateDrawActions();
+  render();
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && drawMode && drawChain.length) {
+    drawChain = [];
+    rebuildSnapCandidates();
+    updateDrawActions();
+    render();
+  }
+});
+
+/* =========================================================
+   RAJZ RENDER OVERLAY — a meglévő render() VÉGÉN hívódik meg
+   ========================================================= */
+function renderDrawingOverlay() {
+  // Kommitált szakaszok
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'var(--accent)';
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22D07D';
+  ctx.lineWidth = 1.8;
+  for (const [ax, ay, bx, by] of drawSegments) {
+    const a = worldToScreen(ax, ay), b = worldToScreen(bx, by);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  // Csúcsok
+  const VERTEX_FILL = ctx.strokeStyle;
+  ctx.fillStyle = VERTEX_FILL;
+  const seen = new Set();
+  const stamp = (x, y) => {
+    const k = x + ',' + y;
+    if (seen.has(k)) return; seen.add(k);
+    const s = worldToScreen(x, y);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2); ctx.fill();
+  };
+  for (const [ax, ay, bx, by] of drawSegments) { stamp(ax, ay); stamp(bx, by); }
+  for (const p of drawChain) stamp(p.x, p.y);
+
+  // Aktív lánc kezdő-jelölő
+  if (drawChain.length) {
+    const last = drawChain[drawChain.length - 1];
+    const s = worldToScreen(last.x, last.y);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 7.5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(34, 208, 125, 0.55)'; ctx.lineWidth = 1.4; ctx.stroke();
+  }
+
+  // Rubber band a lánc végéről a kurzorhoz
+  if (drawMode && drawChain.length && drawCursor) {
+    const tgt = drawSnapped ? worldToScreen(drawSnapped.x, drawSnapped.y) : drawCursor;
+    const last = drawChain[drawChain.length - 1];
+    const lp = worldToScreen(last.x, last.y);
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = 'rgba(34, 208, 125, 0.6)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(lp.x, lp.y); ctx.lineTo(tgt.x, tgt.y); ctx.stroke();
+    ctx.setLineDash([]);
+    // Hossz-felirat (világ-egységben)
+    const tgtW = drawSnapped ? { x: drawSnapped.x, y: drawSnapped.y } : screenToWorld(drawCursor.x, drawCursor.y);
+    const dx = tgtW.x - last.x, dy = tgtW.y - last.y;
+    const lenW = Math.hypot(dx, dy);
+    if (lenW > 0) {
+      const mx = (lp.x + tgt.x) / 2, my = (lp.y + tgt.y) / 2;
+      const txt = lenW.toFixed(2);
+      ctx.font = '700 11px "JetBrains Mono", monospace';
+      const tw = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(10,15,20,0.85)';
+      ctx.fillRect(mx - tw/2 - 5, my - 20, tw + 10, 16);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22D07D';
+      ctx.fillText(txt, mx - tw/2, my - 8);
+    }
+  }
+
+  // Kurzor + crosshair + snap glyph (csak draw módban)
+  if (drawMode && drawFinger && drawCursor) {
+    const fx = drawSnapped ? worldToScreen(drawSnapped.x, drawSnapped.y).x : drawCursor.x;
+    const fy = drawSnapped ? worldToScreen(drawSnapped.x, drawSnapped.y).y : drawCursor.y;
+
+    // Tether: ujj → kurzor (csak ha van eltolás)
+    if (Math.abs(drawFinger.y - drawCursor.y) > 1) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(34, 208, 125, 0.35)'; ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(drawFinger.x, drawFinger.y); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.restore();
+      // ujj jelölés
+      ctx.beginPath(); ctx.arc(drawFinger.x, drawFinger.y, 18, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(120, 130, 145, 0.4)'; ctx.lineWidth = 1.3; ctx.stroke();
+    }
+
+    // Crosshair
+    ctx.strokeStyle = drawSnapped ? SNAP_COLORS[drawSnapped.t] : (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22D07D');
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(fx - 14, fy); ctx.lineTo(fx - 4, fy);
+    ctx.moveTo(fx + 4, fy); ctx.lineTo(fx + 14, fy);
+    ctx.moveTo(fx, fy - 14); ctx.lineTo(fx, fy - 4);
+    ctx.moveTo(fx, fy + 4); ctx.lineTo(fx, fy + 14);
+    ctx.stroke();
+
+    // Snap glyph + label
+    if (drawSnapped) {
+      drawSnapGlyph(fx, fy, drawSnapped.t, 8);
+      const name = SNAP_NAMES[drawSnapped.t];
+      ctx.font = '600 11px "Syne", sans-serif';
+      const tw = ctx.measureText(name).width;
+      const bx = fx + 18, by = fy - 22;
+      ctx.fillStyle = 'rgba(20,28,38,0.92)';
+      ctx.fillRect(bx, by, tw + 14, 20);
+      ctx.strokeStyle = SNAP_COLORS[drawSnapped.t]; ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, tw + 14, 20);
+      ctx.fillStyle = SNAP_COLORS[drawSnapped.t];
+      ctx.fillText(name, bx + 7, by + 14);
+    }
+
+    // Mágnes-sugár ha nincs snap
+    if (!drawSnapped) {
+      ctx.beginPath(); ctx.arc(drawCursor.x, drawCursor.y, SNAP.magnet, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(34, 208, 125, 0.18)'; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+
+function drawSnapGlyph(x, y, t, size) {
+  ctx.save();
+  ctx.strokeStyle = SNAP_COLORS[t]; ctx.lineWidth = 2; ctx.fillStyle = 'transparent';
+  ctx.beginPath();
+  if (t === 'endpoint') ctx.rect(x - size, y - size, size * 2, size * 2);
+  else if (t === 'midpoint') {
+    ctx.moveTo(x, y - size * 1.2);
+    ctx.lineTo(x + size * 1.15, y + size);
+    ctx.lineTo(x - size * 1.15, y + size);
+    ctx.closePath();
+  }
+  else if (t === 'center') ctx.arc(x, y, size, 0, Math.PI*2);
+  else if (t === 'intersection') {
+    ctx.moveTo(x - size, y - size); ctx.lineTo(x + size, y + size);
+    ctx.moveTo(x + size, y - size); ctx.lineTo(x - size, y + size);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// A meglévő render() függvényt nem patcheljük újra; ehelyett MONKEYPATCH:
+const _origRender = render;
+render = function() {
+  _origRender();
+  if (drawMode || drawChain.length || drawSegments.length) renderDrawingOverlay();
+};
+
+// Snap-jelöltek újraépítése amikor változik az állomány vagy a réteg-láthatóság
+const _origRebuildSourcesStrip = rebuildSourcesStrip;
+rebuildSourcesStrip = function() {
+  _origRebuildSourcesStrip();
+  rebuildSnapCandidates();
+};
+
+// Folyamatos animáció a snap-pulzhoz és koordináta-feedbackhez draw módban
+function drawLoop() {
+  if (drawMode && drawFinger) render();
+  requestAnimationFrame(drawLoop);
+}
+
 resizeCanvas();
+drawLoop();
 </script>
 
 </body>
