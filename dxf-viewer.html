@@ -549,6 +549,42 @@
   .da-btn:active { transform: scale(0.96); }
   .da-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .da-btn.finish { border-color: var(--accent); color: var(--accent); }
+  .da-layer { gap: 7px; padding: 0 12px; }
+  .da-layer-swatch {
+    width: 14px; height: 14px; border-radius: 3px;
+    background: var(--accent); border: 1px solid rgba(255,255,255,0.12);
+    flex-shrink: 0;
+  }
+  .da-layer-name {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    max-width: 110px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .layer-popover { width: 240px; max-height: 320px; padding: 6px; }
+  .layer-popover .popover-head { padding: 4px 6px 6px; margin-bottom: 4px; border-bottom: 1px solid var(--panel-border); }
+  .layer-popover-list {
+    display: flex; flex-direction: column;
+    max-height: 240px; overflow-y: auto;
+  }
+  .layer-pop-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 4px;
+    background: transparent; border: none; color: var(--text-primary);
+    font-family: var(--font-body); font-size: 12px;
+    cursor: pointer; text-align: left;
+  }
+  .layer-pop-item:hover { background: var(--surface-2); }
+  .layer-pop-item.selected { background: rgba(34, 208, 125, 0.1); color: var(--accent); }
+  .layer-pop-swatch {
+    width: 12px; height: 12px; border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+  }
+  .layer-pop-name {
+    flex: 1; font-family: var(--font-mono); font-size: 11.5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   /* ---------- Subsection (rétegek + entitások) ---------- */
   .subsection {
@@ -2040,6 +2076,11 @@
 
   <!-- Rajz akció pillek (Vissza / Lezárás) - csak draw módban + ha van aktív lánc -->
   <div class="draw-actions" id="draw-actions">
+    <button class="da-btn da-layer" id="da-layer" type="button" title="Aktuális rajzréteg">
+      <span class="da-layer-swatch" id="da-layer-swatch"></span>
+      <span class="da-layer-name" id="da-layer-name">Saját</span>
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
     <button class="da-btn" id="da-undo" type="button">
       <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
       Visszavonás
@@ -2203,6 +2244,18 @@
     </button>
   </div>
   <div class="shape-grid" id="shape-grid"></div>
+</div>
+
+<div class="popover layer-popover" id="layer-popover" hidden>
+  <div class="popover-head">
+    <span class="popover-title">Rajz rétege</span>
+    <button class="popover-close" id="layer-popover-close" type="button" aria-label="Bezárás">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+      </svg>
+    </button>
+  </div>
+  <div class="layer-popover-list" id="layer-popover-list"></div>
 </div>
 
 <div class="color-modal-backdrop" id="color-modal-backdrop" hidden>
@@ -4727,7 +4780,8 @@ function rebuildSnapCandidates() {
     if (src.visibility === 2) continue;
     for (const p of src.points) snapCandidates.push({ x: p.x, y: p.y, t: 'endpoint' });
   }
-  for (const [ax, ay, bx, by] of drawSegments) {
+  for (const [ax, ay, bx, by, layer] of drawSegments) {
+    if (layer && hiddenLayers.has(layer)) continue;
     snapCandidates.push({ x: ax, y: ay, t: 'endpoint' });
     snapCandidates.push({ x: bx, y: by, t: 'endpoint' });
     snapCandidates.push({ x: (ax + bx) / 2, y: (ay + by) / 2, t: 'midpoint' });
@@ -4748,7 +4802,10 @@ function intersectionsNearby(screenX, screenY, radius) {
         segments.push([e.vertices[i-1].x, e.vertices[i-1].y, e.vertices[i].x, e.vertices[i].y]);
     }
   }
-  for (const [ax, ay, bx, by] of drawSegments) segments.push([ax, ay, bx, by]);
+  for (const [ax, ay, bx, by, layer] of drawSegments) {
+    if (layer && hiddenLayers.has(layer)) continue;
+    segments.push([ax, ay, bx, by]);
+  }
   for (let i = 0; i < segments.length; i++) {
     for (let j = i + 1; j < segments.length; j++) {
       const p = segLineIntersection(segments[i], segments[j]);
@@ -4794,13 +4851,19 @@ function findSnap(screenX, screenY) {
    ========================================================= */
 let drawMode = false;
 let drawChain = [];       // aktív polyline csúcsai világban
-let drawSegments = [];    // lezárt szakaszok [ax,ay,bx,by] világban
+let drawSegments = [];    // lezárt szakaszok: [ax,ay,bx,by,layerName]
 let drawFinger = null;    // raw ujj képernyő-koord
 let drawCursor = null;    // eltolt kurzor képernyő-koord
 let drawSnapped = null;   // világbeli snap-target
 let drawDownT = 0, drawDownX = 0, drawDownY = 0;
 let drawLastTapT = 0, drawLastTapX = 0, drawLastTapY = 0;
 let drawPointerType = 'mouse';
+
+// Aktuális rajz-réteg neve. Új TXT vagy DXF betöltése esetén lehetőleg megőrződik.
+// '__own__' = a saját "Saját" alapréteg (független a DXF rétegektől)
+let currentDrawLayer = '__own__';
+const OWN_LAYER_NAME = 'Saját';
+const OWN_LAYER_COLOR = '#22D07D';
 
 const drawActions = document.getElementById('draw-actions');
 
@@ -4863,7 +4926,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (drawChain.length) {
     const prev = drawChain[drawChain.length - 1];
     if (Math.hypot(w.x - prev.x, w.y - prev.y) > 1e-6) {
-      drawSegments.push([prev.x, prev.y, w.x, w.y]);
+      drawSegments.push([prev.x, prev.y, w.x, w.y, currentDrawLayer]);
       drawChain.push(w);
     }
   } else {
@@ -4921,30 +4984,45 @@ window.addEventListener('keydown', (e) => {
 /* =========================================================
    RAJZ RENDER OVERLAY — a meglévő render() VÉGÉN hívódik meg
    ========================================================= */
+function getLayerColor(layerName) {
+  if (layerName === '__own__' || !layerName) return OWN_LAYER_COLOR;
+  if (layerColorOverrides[layerName]) return layerColorOverrides[layerName];
+  if (dxfData && dxfData.layers && dxfData.layers[layerName] && dxfData.layers[layerName].color) {
+    return dxfData.layers[layerName].color;
+  }
+  return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22D07D';
+}
+
 function renderDrawingOverlay() {
-  // Kommitált szakaszok
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'var(--accent)';
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22D07D';
   ctx.lineWidth = 1.8;
-  for (const [ax, ay, bx, by] of drawSegments) {
+  // Kommitált szakaszok - per-réteg színnel, rejtett rétegek nélkül
+  for (const [ax, ay, bx, by, layer] of drawSegments) {
+    if (layer && layer !== '__own__' && hiddenLayers.has(layer)) continue;
+    ctx.strokeStyle = getLayerColor(layer);
     const a = worldToScreen(ax, ay), b = worldToScreen(bx, by);
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
-  // Csúcsok
-  const VERTEX_FILL = ctx.strokeStyle;
-  ctx.fillStyle = VERTEX_FILL;
+  // Aktív lánc szakaszai a currentDrawLayer színével (a chain önmagában csúcs-lista,
+  // a köztük lévő szakaszok már a drawSegments-ben vannak; itt a chain végpontjait
+  // látjuk csúcsként.)
   const seen = new Set();
-  const stamp = (x, y) => {
+  const stamp = (x, y, color) => {
     const k = x + ',' + y;
     if (seen.has(k)) return; seen.add(k);
     const s = worldToScreen(x, y);
+    ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2); ctx.fill();
   };
-  for (const [ax, ay, bx, by] of drawSegments) { stamp(ax, ay); stamp(bx, by); }
-  for (const p of drawChain) stamp(p.x, p.y);
+  for (const [ax, ay, bx, by, layer] of drawSegments) {
+    if (layer && layer !== '__own__' && hiddenLayers.has(layer)) continue;
+    const c = getLayerColor(layer);
+    stamp(ax, ay, c); stamp(bx, by, c);
+  }
+  const chainColor = getLayerColor(currentDrawLayer);
+  for (const p of drawChain) stamp(p.x, p.y, chainColor);
 
   // Aktív lánc kezdő-jelölő
   if (drawChain.length) {
@@ -5063,6 +5141,7 @@ const _origRebuildSourcesStrip = rebuildSourcesStrip;
 rebuildSourcesStrip = function() {
   _origRebuildSourcesStrip();
   rebuildSnapCandidates();
+  if (typeof updateLayerPill === 'function') updateLayerPill();
 };
 
 // Folyamatos animáció a snap-pulzhoz és koordináta-feedbackhez draw módban
@@ -5070,6 +5149,108 @@ function drawLoop() {
   if (drawMode && drawFinger) render();
   requestAnimationFrame(drawLoop);
 }
+
+/* =========================================================
+   RAJZ-RÉTEG POPOVER (Saját + DXF rétegek)
+   ========================================================= */
+function getAvailableLayers() {
+  const all = [{ key: '__own__', name: OWN_LAYER_NAME, color: OWN_LAYER_COLOR }];
+  if (dxfData && dxfData.layers) {
+    const names = Object.keys(dxfData.layers).sort();
+    for (const n of names) {
+      all.push({ key: n, name: n, color: getLayerColor(n) });
+    }
+  }
+  return all;
+}
+
+function updateLayerPill() {
+  const layers = getAvailableLayers();
+  const cur = layers.find(l => l.key === currentDrawLayer) || layers[0];
+  document.getElementById('da-layer-name').textContent = cur.name;
+  document.getElementById('da-layer-swatch').style.background = cur.color;
+}
+updateLayerPill();
+
+function openLayerPopover(anchorEl) {
+  closeActivePopover();
+  popoverTarget = { kind: 'layer' };
+  const pop = document.getElementById('layer-popover');
+  const list = document.getElementById('layer-popover-list');
+  list.innerHTML = '';
+  for (const l of getAvailableLayers()) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'layer-pop-item';
+    if (l.key === currentDrawLayer) item.classList.add('selected');
+    const sw = document.createElement('span');
+    sw.className = 'layer-pop-swatch';
+    sw.style.background = l.color;
+    const nm = document.createElement('span');
+    nm.className = 'layer-pop-name';
+    nm.textContent = l.name;
+    item.appendChild(sw); item.appendChild(nm);
+    item.addEventListener('click', () => {
+      currentDrawLayer = l.key;
+      updateLayerPill();
+      closeActivePopover();
+      render();
+    });
+    list.appendChild(item);
+  }
+  positionPopover(pop, anchorEl);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+  activePopover = pop;
+  registerOutsideClose();
+}
+document.getElementById('layer-popover-close').addEventListener('click', closeActivePopover);
+document.getElementById('da-layer').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openLayerPopover(e.currentTarget);
+});
+
+/* =========================================================
+   MULTI-TOUCH TAPS (2 ujj = lezárás, 3+ ujj = visszavonás)
+   ========================================================= */
+let multiTapState = null;
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length >= 2) {
+    if (!multiTapState) {
+      multiTapState = {
+        startT: performance.now(),
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        maxFingers: e.touches.length,
+      };
+    } else {
+      multiTapState.maxFingers = Math.max(multiTapState.maxFingers, e.touches.length);
+    }
+  }
+}, { passive: false });
+const handleMultiTouchEnd = (e) => {
+  if (!multiTapState) return;
+  // csak amikor MINDEN ujj felemelkedett értékeljük
+  if (e.touches && e.touches.length > 0) return;
+  const dur = performance.now() - multiTapState.startT;
+  const last = e.changedTouches && e.changedTouches[0];
+  const moved = last ? Math.hypot(last.clientX - multiTapState.startX, last.clientY - multiTapState.startY) : 0;
+  const fingers = multiTapState.maxFingers;
+  multiTapState = null;
+  if (dur > 350 || moved > 20) return; // pinch/pan, nem koppintás
+  if (fingers === 2) {
+    if (drawMode && drawChain.length) {
+      drawChain = [];
+      rebuildSnapCandidates();
+      updateDrawActions();
+      render();
+    }
+  } else if (fingers >= 3) {
+    // Globális undo - egyelőre a rajz-utolsó művelet
+    document.getElementById('da-undo').click();
+  }
+};
+canvas.addEventListener('touchend', handleMultiTouchEnd, { passive: false });
+canvas.addEventListener('touchcancel', handleMultiTouchEnd, { passive: false });
 
 resizeCanvas();
 drawLoop();
