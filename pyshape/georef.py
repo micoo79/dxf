@@ -42,16 +42,22 @@ def _plane_basis(pts):
     return n, a1, c
 
 
-def similarity_terrain_aware(src, dst, terrain_pts=None, weights=None, log=print):
+def similarity_terrain_aware(src, dst, terrain_pts=None, cam_pts=None,
+                             weights=None, log=print):
     """Umeyama + síkdegeneráció feloldása.
 
     terrain_pts: pontok az src keretében, amelyeknek a transzformáció után a
-    kamerák (dst magasságai) ALATT kell lenniük (légi felvételezés feltevés).
+    kameráknak ALATTA kell lenniük (légi felvételezés feltevés).
+    cam_pts: kameraközéppontok az src keretében a fenti ellenőrzéshez;
+    None esetén az src pontokat tekinti kameráknak.
     """
+    if cam_pts is None:
+        cam_pts = src
+    cam_pts = np.asarray(cam_pts, float)
     s, R, t = umeyama(src, dst, weights)
     if terrain_pts is None or len(terrain_pts) == 0:
         return s, R, t
-    cam_z = (s * (R @ src.T).T + t)[:, 2].mean()
+    cam_z = (s * (R @ cam_pts.T).T + t)[:, 2].mean()
     ter_z = np.median((s * (R @ np.asarray(terrain_pts).T).T + t)[:, 2])
     if ter_z < cam_z:
         return s, R, t
@@ -64,7 +70,7 @@ def similarity_terrain_aware(src, dst, terrain_pts=None, weights=None, log=print
     s2, R2, t2 = umeyama(src2, dst, weights)
     R_c = R2 @ Rf
     t_c = t2 + s2 * R2 @ (c - Rf @ c)
-    cam_z = (s2 * (R_c @ src.T).T + t_c)[:, 2].mean()
+    cam_z = (s2 * (R_c @ cam_pts.T).T + t_c)[:, 2].mean()
     ter_z = np.median((s2 * (R_c @ np.asarray(terrain_pts).T).T + t_c)[:, 2])
     if ter_z > cam_z:
         log("  ! figyelem: a terep így is a kamerák fölött van — ellenőrizd a GPS-t")

@@ -148,8 +148,10 @@ def optimize_with_gcps(project, gps_sigma=3.0, marker_weight=4.0, log=print):
             dst.append(project.eov_to_world(np.array(p.gps_eov))[0])
             wgt.append(1.0)
     if n_gcp_fit >= 3:
+        cam_pts = np.array([p.C for p in project.photos if p.aligned])
         s, R, t = similarity_terrain_aware(np.array(src), np.array(dst),
                                            terrain_pts=project.points,
+                                           cam_pts=cam_pts,
                                            weights=np.array(wgt), log=log)
         apply_similarity(project, s, R, t)
         project.georeferenced = True

@@ -222,7 +222,11 @@ def build_dense_cloud(project, quality="medium", n_partners=3,
             continue
         D = np.stack(depths)                      # (k, h, w)
         cnt = np.isfinite(D).sum(0)
-        med = np.nanmedian(D, axis=0)
+        with np.errstate(all="ignore"):
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                med = np.nanmedian(D, axis=0)
         need = 2 if len(depths) >= 2 else 1
         agree = (np.abs(D - med[None]) < (agree_tol * med)[None]).sum(0)
         fused = np.where((cnt >= need) & (agree >= need), med, np.nan)

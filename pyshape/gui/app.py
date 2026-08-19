@@ -311,8 +311,17 @@ class App(tk.Tk):
             if name not in listed and self.prj.photo_by_name(name):
                 t.insert("", "end", iid=name, text=name,
                          values=("bemérve", ""))
-        if not preds and not self.prj.georeferenced:
-            self.log("A láthatóság előrejelzéséhez előbb align + georeferálás kell.")
+                listed.add(name)
+        if not preds:
+            # georeferálás nélkül nincs előrejelzés — az összes kép felajánlása,
+            # hogy a mérés kézzel akkor is elvégezhető legyen
+            if not self.prj.georeferenced:
+                self.log("Nincs georeferálás — a lista az összes képet mutatja "
+                         "(a becsült hely nem számítható).")
+            for p in self.prj.photos:
+                if p.name not in listed:
+                    t.insert("", "end", iid=p.name, text=p.name,
+                             values=("-", ""))
 
     def _refresh_status(self):
         if not self.prj:
