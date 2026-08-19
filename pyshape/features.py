@@ -46,7 +46,8 @@ def detect_features(project, quality="high", log=print):
         xi = np.clip(pts[:, 0].astype(int), 0, img.shape[1] - 1)
         yi = np.clip(pts[:, 1].astype(int), 0, img.shape[0] - 1)
         colors = img[yi, xi][:, ::-1].copy()  # BGR -> RGB
-        pts /= s  # vissza teljes felbontásra
+        # vissza teljes felbontásra (pixelközép-konvencióval)
+        pts = (pts + 0.5) / s - 0.5
         feats[photo.name] = (pts, desc, colors)
         log(f"  [{i+1}/{len(project.photos)}] {photo.name}: {len(kps)} pont")
     return feats
