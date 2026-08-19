@@ -1,0 +1,7 @@
+# PyShape függőségek (Python 3.10+, tkinter a rendszer Pythonjából)
+numpy>=1.24
+scipy>=1.10
+opencv-python>=4.8        # GUI nélküli gépen: opencv-python-headless
+pyproj>=3.5
+rasterio>=1.3
+Pillow>=9.5
