@@ -259,34 +259,68 @@ class _Recon:
 
     # ------------------------------------------------------------------- BA
 
-    def run_ba(self, refine_intr=(), fix_first=True, max_nfev=40):
+    def run_ba(self, refine_intr=(), fix_first=True, max_nfev=40,
+               free_photos=None):
+        """Kötegelt kiegyenlítés.
+
+        free_photos: globális fotóindexek halmaza — csak ezek a kamerák (és a
+        rajtuk látszó pontok) mozognak (lokális BA); None = globális BA.
+        """
         reg = sorted(self.registered)
         if len(reg) < 2 or len(self.points) < 10:
             return
-        ridx = {p: i for i, p in enumerate(reg)}
-        rvecs = np.zeros((len(reg), 3)); tvecs = np.zeros((len(reg), 3))
-        for p, i in ridx.items():
-            R, C = self.registered[p]
-            rvecs[i], tvecs[i] = rt_from_pose(R, C)
-        obs_p, obs_c, obs_uv = [], [], []
+        local = free_photos is not None
+        if local:
+            free_photos = set(free_photos) & set(reg)
+            if not free_photos:
+                return
+
+        # a szabad kamerákon látszó pontok szabadok; lokális BA-nál csak az
+        # ezekhez tartozó megfigyelések kerülnek a problémába
+        pt_free = np.zeros(len(self.points), bool)
+        obs_all = []      # (pt_i, pidx, u, v)
         for pt_i, ti in enumerate(self.point_track):
             for n, fi in self.tracks[ti].items():
                 pidx = self.name2idx[n]
-                if pidx in ridx:
-                    obs_p.append(pt_i)
-                    obs_c.append(ridx[pidx])
-                    obs_uv.append(self.uv_of(pidx, fi))
+                if pidx in self.registered:
+                    obs_all.append((pt_i, pidx, fi))
+                    if not local or pidx in free_photos:
+                        pt_free[pt_i] = True
+        if local:
+            obs_sel = [(p, c, f) for (p, c, f) in obs_all if pt_free[p]]
+            involved = sorted({c for _, c, _ in obs_sel})
+        else:
+            obs_sel = obs_all
+            involved = reg
+        if len(obs_sel) < 30:
+            return
+
+        ridx = {p: i for i, p in enumerate(involved)}
+        rvecs = np.zeros((len(involved), 3)); tvecs = np.zeros((len(involved), 3))
+        for p, i in ridx.items():
+            R, C = self.registered[p]
+            rvecs[i], tvecs[i] = rt_from_pose(R, C)
+        obs_p = np.array([p for p, _, _ in obs_sel])
+        obs_c = np.array([ridx[c] for _, c, _ in obs_sel])
+        obs_uv = np.array([self.uv_of(c, f) for _, c, f in obs_sel])
+
+        if local:
+            fixed_ph = tuple(ridx[p] for p in involved if p not in free_photos)
+            fixed_pts = ~pt_free
+        else:
+            fixed_ph = (0,) if fix_first else ()
+            fixed_pts = None
+
         pts = np.array(self.points)
         cam_params = [c.to_dict() for c in self.prj.cameras]
         for cp in cam_params:
             cp.pop("width"); cp.pop("height")
         prob = BAProblem(
-            pts, np.array(obs_p), np.array(obs_c), np.array(obs_uv),
-            rvecs, tvecs,
-            [self.prj.photos[p].cam_id for p in reg],
+            pts, obs_p, obs_c, obs_uv, rvecs, tvecs,
+            [self.prj.photos[p].cam_id for p in involved],
             cam_params, None,
             refine_intrinsics=refine_intr,
-            fixed_photos=(0,) if fix_first else (),
+            fixed_photos=fixed_ph, fixed_points=fixed_pts,
         )
         prob.solve(max_nfev=max_nfev, log=self.log)
         # visszaírás
@@ -298,13 +332,16 @@ class _Recon:
             c = self.prj.cameras[ci]
             for k, v in cp.items():
                 setattr(c, k, float(v))
-        # kiugró megfigyelések/pontok szűrése
+        # kiugró megfigyelések/pontok szűrése (csak a szabad pontokra)
         errs = prob.reproj_errors()
         pt_err = np.zeros(len(pts)); pt_cnt = np.zeros(len(pts))
-        np.add.at(pt_err, np.array(obs_p), errs)
-        np.add.at(pt_cnt, np.array(obs_p), 1)
+        np.add.at(pt_err, obs_p, errs)
+        np.add.at(pt_cnt, obs_p, 1)
         mean_err = pt_err / np.maximum(pt_cnt, 1)
-        bad = np.where(mean_err > REPROJ_THRESH * 1.5)[0]
+        bad_mask = mean_err > REPROJ_THRESH * 1.5
+        if local:
+            bad_mask &= pt_free
+        bad = np.where(bad_mask)[0]
         if len(bad):
             for b in sorted(bad, reverse=True):
                 ti = self.point_track[b]
@@ -336,6 +373,8 @@ def align_photos(project, quality="high", log=print):
     rec.run_ba()
 
     since_ba = 0
+    since_global = 0
+    reg_order = list(rec.registered)
     while True:
         pidx, n = rec.next_photo()
         if pidx is None or n < 12:
@@ -345,10 +384,19 @@ def align_photos(project, quality="high", log=print):
             # állítjuk a track-listáját (többé nem jelölt)
             rec.photo_tracks[rec.names[pidx]] = []
             continue
+        reg_order.append(pidx)
         rec.triangulate_new()
         since_ba += 1
+        since_global += 1
         if since_ba >= 3:
-            rec.run_ba()
+            if len(rec.registered) <= 15:
+                rec.run_ba()
+            else:
+                # nagy blokk: lokális BA az utolsó képekre, ritkábban globális
+                rec.run_ba(free_photos=reg_order[-8:], max_nfev=25)
+                if since_global >= 15:
+                    rec.run_ba(max_nfev=25)
+                    since_global = 0
             since_ba = 0
     log("Végső kötegelt kiegyenlítés (intrinsics finomítással)...")
     rec.run_ba(refine_intr=("f", "cx", "cy", "k1", "k2"), max_nfev=80)
