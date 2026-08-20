@@ -43,6 +43,7 @@ class App(tk.Tk):
         self.marking_mode = False
         self._queue = queue.Queue()
         self._worker = None
+        self._busy = None
 
         self._build_menu()
         self._build_layout()
@@ -50,6 +51,11 @@ class App(tk.Tk):
 
         if project_path:
             self._open_project(project_path)
+        else:
+            self.log("Üdv a PyShape-ben! Kezdés: Munkafolyamat menü -> "
+                     "1. Képek hozzáadása (a projekt automatikusan létrejön).")
+            self.log("A műveletek állapota itt, a naplóban és a fenti "
+                     "folyamatjelző csíkon követhető.")
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     # ================================================================== UI
@@ -65,7 +71,10 @@ class App(tk.Tk):
         m.add_cascade(label="Fájl", menu=fm)
 
         wm = tk.Menu(m, tearoff=0)
-        wm.add_command(label="1. Képek hozzáadása...", command=self.mi_add_photos)
+        wm.add_command(label="1. Képek hozzáadása (fájlok)...",
+                       command=self.mi_add_photos)
+        wm.add_command(label="1. Képmappa hozzáadása (teljes mappa)...",
+                       command=self.mi_add_folder)
         wm.add_command(label="    Kamerapozíció-referencia betöltése (CSV)...",
                        command=self.mi_load_reference)
         wm.add_command(label="2. Align photos (képek beállítása)",
@@ -205,23 +214,55 @@ class App(tk.Tk):
                     self.log_text.see("end")
                     self.log_text.configure(state="disabled")
                 elif kind == "progress":
+                    # mérhető haladás érkezett: marquee -> százalékos csík
+                    self.progress.stop()
+                    self.progress.configure(mode="determinate")
                     self.progress["value"] = payload
+                    if self._busy:
+                        self.status.config(
+                            text=f"⏳ {self._busy} folyamatban... "
+                                 f"{payload*100:.0f}%  (részletek a naplóban)")
                 elif kind == "done":
-                    self.progress["value"] = 0
+                    self._clear_busy()
                     self._task_finished(payload)
                 elif kind == "error":
-                    self.progress["value"] = 0
+                    self._clear_busy()
                     self._task_finished(None)
                     messagebox.showerror("Hiba", payload)
         except queue.Empty:
             pass
         self.after(100, self._poll_queue)
 
+    def _set_busy(self, name):
+        """Vizuális jelzés, hogy háttérművelet fut: mozgó csík + állapotsor
+        + a Munkafolyamat menü letiltása."""
+        self._busy = name
+        self.progress.configure(mode="indeterminate")
+        self.progress.start(12)
+        self.status.config(text=f"⏳ {name} folyamatban... (részletek a naplóban)")
+        try:
+            for i in range(self.workflow_menu.index("end") + 1):
+                self.workflow_menu.entryconfig(i, state="disabled")
+        except Exception:
+            pass
+
+    def _clear_busy(self):
+        self._busy = None
+        self.progress.stop()
+        self.progress.configure(mode="determinate")
+        self.progress["value"] = 0
+        try:
+            for i in range(self.workflow_menu.index("end") + 1):
+                self.workflow_menu.entryconfig(i, state="normal")
+        except Exception:
+            pass
+
     def _run_task(self, name, fn, on_done=None):
         if self._worker is not None and self._worker.is_alive():
             messagebox.showwarning(APP_NAME, "Már fut egy művelet.")
             return
         self._task_done_cb = on_done
+        self._set_busy(name)
         self.log(f"=== {name} ===")
 
         def wrapper():
@@ -462,20 +503,58 @@ class App(tk.Tk):
         self.log("Projekt elmentve.")
 
     def mi_add_photos(self):
-        if self._need_project():
-            return
+        if self.prj is None:
+            messagebox.showinfo(
+                APP_NAME, "Először létrehozunk egy projektet — a következő "
+                "ablakban add meg, hova mentsük (ide kerülnek majd az "
+                "eredmények is).")
+            self.mi_new_project()
+            if self.prj is None:
+                return
         paths = filedialog.askopenfilenames(
-            title="Képek kiválasztása",
+            title="Képek kiválasztása (Ctrl+A = összes kijelölése)",
             filetypes=[("Képek", "*.jpg *.jpeg *.png *.tif *.tiff"),
                        ("Minden fájl", "*.*")])
         if not paths:
+            self.log("Nem választottál ki képet — a betöltés elmaradt. "
+                     "(Tipp: a fájlablakban Ctrl+A az összes kijelöléséhez, "
+                     "vagy használd a 'Képmappa hozzáadása' menüpontot.)")
             return
+        self._start_add_photos(list(paths))
+
+    def mi_add_folder(self):
+        if self.prj is None:
+            messagebox.showinfo(
+                APP_NAME, "Először létrehozunk egy projektet — a következő "
+                "ablakban add meg, hova mentsük.")
+            self.mi_new_project()
+            if self.prj is None:
+                return
+        folder = filedialog.askdirectory(title="Képeket tartalmazó mappa")
+        if not folder:
+            self.log("Nem választottál mappát — a betöltés elmaradt.")
+            return
+        self._start_add_photos([folder])
+
+    def _start_add_photos(self, paths):
         from ..loader import add_photos
+        self._added_names = []
 
         def task():
-            add_photos(self.prj, list(paths), log=self.log)
+            added = add_photos(self.prj, list(paths), log=self.log,
+                               progress=self._progress_cb)
             self.prj.save()
-        self._run_task("Képek hozzáadása", task)
+            self._added_names = [p.name for p in added]
+            self.log(f"{len(added)} kép betöltve. Duplakattintás egy képre a "
+                     "bal oldali listában = megnyitás a nézőben.")
+            self.log("Következő lépés: Munkafolyamat -> 2. Align photos")
+
+        def done():
+            if self._added_names:
+                photo = self.prj.photo_by_name(self._added_names[0])
+                if photo:
+                    self._open_photo_in_viewer(photo, marking=False)
+        self._run_task("Képek hozzáadása", task, on_done=done)
 
     def mi_load_reference(self):
         if self._need_project():
@@ -511,7 +590,8 @@ class App(tk.Tk):
         from ..georef import georeference_from_gps
 
         def task():
-            align_photos(self.prj, quality=q, log=self.log)
+            align_photos(self.prj, quality=q, log=self.log,
+                         progress=self._progress_cb)
             if sum(1 for p in self.prj.photos
                    if p.aligned and p.gps_eov) >= 3:
                 georeference_from_gps(self.prj, log=self.log)

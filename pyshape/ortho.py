@@ -75,8 +75,10 @@ def build_orthophoto(project, dsm, gsd=None, blend="weighted",
         wv = np.minimum(v, cam.height - 1 - v) / (cam.height / 2)
         wgt = np.clip(np.minimum(wu, wv), 0, 1) ** 2
         wgt = np.where(inside, wgt, 0).astype(np.float32)
-        img = cv2.imread(photo.path, cv2.IMREAD_COLOR)
+        from .imio import imread
+        img = imread(photo.path, cv2.IMREAD_COLOR)
         if img is None:
+            log(f"  ! nem olvasható kép, kihagyva: {photo.name}")
             continue
         col = cv2.remap(img, u, v, cv2.INTER_LINEAR,
                         borderMode=cv2.BORDER_CONSTANT, borderValue=0)

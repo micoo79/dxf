@@ -76,7 +76,8 @@ def select_stereo_partners(project, n_partners=3, log=print):
 
 
 def _load_scaled(path, scale):
-    img = cv2.imread(path, cv2.IMREAD_COLOR)
+    from .imio import imread
+    img = imread(path, cv2.IMREAD_COLOR)
     if img is None:
         raise IOError(f"Nem olvasható: {path}")
     if scale != 1.0:

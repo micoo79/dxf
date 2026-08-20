@@ -354,13 +354,23 @@ class _Recon:
             self.log(f"  {len(bad)} kiugró pont törölve")
 
 
-def align_photos(project, quality="high", log=print):
-    """A teljes align lépés. Visszatér: statisztika dict."""
+def align_photos(project, quality="high", log=print, progress=None):
+    """A teljes align lépés. Visszatér: statisztika dict.
+
+    progress: 0..1 közötti visszajelzés-callback (opcionális).
+    """
+    def sub(a, b):
+        if progress is None:
+            return None
+        return lambda f: progress(a + f * (b - a))
+
     log("Jellemzőpontok detektálása (SIFT)...")
-    feats = F.detect_features(project, quality=quality, log=log)
+    feats = F.detect_features(project, quality=quality, log=log,
+                              progress=sub(0.0, 0.35))
     log("Képpárok kijelölése és illesztése...")
     pairs = F.select_pairs(project, log=log)
-    matches = F.match_pairs(project, feats, pairs, log=log)
+    matches = F.match_pairs(project, feats, pairs, log=log,
+                            progress=sub(0.35, 0.55))
     if not matches:
         raise RuntimeError("Egyetlen képpárt sem sikerült összeilleszteni.")
     log("Kötőpont-láncok építése...")
@@ -386,6 +396,8 @@ def align_photos(project, quality="high", log=print):
             continue
         reg_order.append(pidx)
         rec.triangulate_new()
+        if progress:
+            progress(0.58 + 0.32 * len(rec.registered) / len(project.photos))
         since_ba += 1
         since_global += 1
         if since_ba >= 3:
@@ -399,9 +411,13 @@ def align_photos(project, quality="high", log=print):
                     since_global = 0
             since_ba = 0
     log("Végső kötegelt kiegyenlítés (intrinsics finomítással)...")
+    if progress:
+        progress(0.92)
     rec.run_ba(refine_intr=("f", "cx", "cy", "k1", "k2"), max_nfev=80)
     rec.triangulate_new()
     rec.run_ba(refine_intr=("f", "cx", "cy", "k1", "k2"), max_nfev=40)
+    if progress:
+        progress(1.0)
 
     # ------------------------------------------------------ projektbe írás
     for pidx, (R, C) in rec.registered.items():

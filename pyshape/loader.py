@@ -47,7 +47,8 @@ def load_reference_csv(path):
     return out
 
 
-def add_photos(project, paths, reference_csv=None, geoid_offset=0.0, log=print):
+def add_photos(project, paths, reference_csv=None, geoid_offset=0.0, log=print,
+               progress=None):
     """Képek hozzáadása a projekthez.
 
     - EXIF-ből kiolvassa a GPS-t és WGS84-ből EOV-ba (EPSG:23700) transzformálja.
@@ -67,14 +68,26 @@ def add_photos(project, paths, reference_csv=None, geoid_offset=0.0, log=print):
         else:
             files.append(p)
 
+    if not files:
+        log("! Nem található képfájl a megadott helyen "
+            "(támogatott: jpg, jpeg, png, tif, tiff, bmp).")
+        return []
+    log(f"{len(files)} képfájl feldolgozása...")
+
     added = []
     existing = {p.name for p in project.photos}
-    for fp in files:
+    for file_i, fp in enumerate(files):
+        if progress:
+            progress((file_i + 1) / len(files))
         name = os.path.basename(fp)
         if name in existing:
             log(f"  kihagyva (már betöltve): {name}")
             continue
-        info = read_exif(fp)
+        try:
+            info = read_exif(fp)
+        except Exception as e:
+            log(f"  ! nem olvasható, kihagyva: {name} ({e})")
+            continue
         photo = Photo(fp, name)
         photo.exif = {k: info[k] for k in ("f35", "focal_mm", "make", "model")}
         w, h = info["width"], info["height"]

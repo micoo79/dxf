@@ -14,7 +14,8 @@ QUALITY_FEATURES = {"highest": 12000, "high": 8000, "medium": 6000, "low": 4000}
 
 
 def load_image_scaled(path, max_dim=None, scale=None, gray=False):
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE if gray else cv2.IMREAD_COLOR)
+    from .imio import imread
+    img = imread(path, cv2.IMREAD_GRAYSCALE if gray else cv2.IMREAD_COLOR)
     if img is None:
         raise IOError(f"Nem olvasható kép: {path}")
     s = 1.0
@@ -27,13 +28,15 @@ def load_image_scaled(path, max_dim=None, scale=None, gray=False):
     return img, s
 
 
-def detect_features(project, quality="high", log=print):
+def detect_features(project, quality="high", log=print, progress=None):
     """SIFT kulcspontok minden képre. Visszatér: dict name -> (kp Nx2, desc NxD, colors Nx3)."""
     scale = QUALITY_SCALE.get(quality, 1.0)
     nfeat = QUALITY_FEATURES.get(quality, 8000)
     sift = cv2.SIFT_create(nfeatures=nfeat, contrastThreshold=0.02)
     feats = {}
     for i, photo in enumerate(project.photos):
+        if progress:
+            progress((i + 1) / len(project.photos))
         img, s = load_image_scaled(photo.path, scale=scale)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         kps, desc = sift.detectAndCompute(gray, None)
@@ -83,7 +86,8 @@ def select_pairs(project, max_neighbors=8, log=print):
     return [(names[i], names[j]) for i, j in pairs]
 
 
-def match_pairs(project, feats, pairs, ratio=0.8, min_inliers=25, log=print):
+def match_pairs(project, feats, pairs, ratio=0.8, min_inliers=25, log=print,
+                progress=None):
     """Párok illesztése: FLANN + arányteszt + geometriai (F-mátrix RANSAC) szűrés.
 
     Visszatér: dict (nameA, nameB) -> Mx2 int index-pár tömb (A-beli, B-beli).
@@ -93,6 +97,8 @@ def match_pairs(project, feats, pairs, ratio=0.8, min_inliers=25, log=print):
                                   {"checks": 64})
     out = {}
     for k, (na, nb) in enumerate(pairs):
+        if progress:
+            progress((k + 1) / len(pairs))
         pa, da, _ = feats[na]
         pb, db, _ = feats[nb]
         if len(da) < 8 or len(db) < 8:
