@@ -1,21 +1,55 @@
 @echo off
 rem === PyShape inditasa Windowson ===
-rem Elofeltetel: Python 3.10+ telepitve a python.org-rol
-rem (telepiteskor pipald be: "Add python.exe to PATH")
+rem Megfelelo Python keresese: 3.10+ NORMAL (nem "free-threaded") valtozat,
+rem tkinterrel. A 3.13t/3.14t jelu free-threaded Pythonnal a numpy/opencv
+rem nem mukodik, ezert azt kihagyjuk.
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
-where py >nul 2>nul
-if %errorlevel%==0 (set PY=py -3) else (set PY=python)
+
+set "CHECK=import sys,sysconfig;assert sys.version_info>=(3,10);assert not sysconfig.get_config_var('Py_GIL_DISABLED');import tkinter"
+set "PYEXE="
+
+for %%V in (-3.12 -3.11 -3.13 -3.10 -3.14) do (
+  if not defined PYEXE (
+    py %%V -c "%CHECK%" >nul 2>nul
+    if !errorlevel!==0 set "PYEXE=py %%V"
+  )
+)
+if not defined PYEXE (
+  python -c "%CHECK%" >nul 2>nul
+  if !errorlevel!==0 set "PYEXE=python"
+)
+
+if not defined PYEXE (
+  echo.
+  echo ============================================================
+  echo  Nem talaltam megfelelo Pythont ezen a gepen.
+  echo.
+  echo  Megoldas: telepitsd a normal Python 3.12-t innen:
+  echo    https://www.python.org/downloads/release/python-31210/
+  echo  ...lent a "Windows installer 64-bit" linket valaszd.
+  echo.
+  echo  Telepiteskor pipald be: "Add python.exe to PATH"
+  echo  FONTOS: a "free-threaded binaries" opciot NE valaszd.
+  echo  Utana inditsd ujra ezt a fajlt.
+  echo ============================================================
+  pause
+  exit /b 1
+)
+
+echo Hasznalt Python: %PYEXE%
+%PYEXE% -c "import sys; print(sys.version)"
 
 echo Szukseges csomagok telepitese (elso inditaskor par perc)...
-%PY% -m pip install --quiet -r requirements.txt
+%PYEXE% -m pip install --quiet -r requirements.txt
 if errorlevel 1 (
   echo.
-  echo HIBA: nem sikerult a csomagok telepitese.
-  echo Ellenorizd, hogy a Python telepitve van-e: https://www.python.org/downloads/
+  echo HIBA: nem sikerult a csomagok telepitese. Probald internettel ujra,
+  echo vagy futtasd kezzel: %PYEXE% -m pip install -r requirements.txt
   pause
   exit /b 1
 )
 
 echo PyShape inditasa...
-%PY% -m pyshape gui
-pause
+%PYEXE% -m pyshape gui
+if errorlevel 1 pause
