@@ -40,14 +40,24 @@ if not defined PYEXE (
 echo Hasznalt Python: %PYEXE%
 %PYEXE% -c "import sys; print(sys.version)"
 
-echo Szukseges csomagok telepitese (elso inditaskor par perc)...
-%PYEXE% -m pip install --quiet -r requirements.txt
+rem Gyors ellenorzes: megvannak-e a csomagok ES epek-e a binaris moduljaik.
+rem Ha egy korabbi hibas Python-valtozat felkesz csomagokat hagyott hatra,
+rem a force-reinstall kijavitja oket.
+set "IMPCHECK=import numpy,scipy,cv2,PIL,rasterio,pyproj,pyproj.network,tkinter"
+%PYEXE% -c "%IMPCHECK%" >nul 2>nul
 if errorlevel 1 (
-  echo.
-  echo HIBA: nem sikerult a csomagok telepitese. Probald internettel ujra,
-  echo vagy futtasd kezzel: %PYEXE% -m pip install -r requirements.txt
-  pause
-  exit /b 1
+  echo Szukseges csomagok telepitese / javitasa - par perc, kerlek varj...
+  %PYEXE% -m pip install --upgrade --force-reinstall -r requirements.txt
+  %PYEXE% -c "%IMPCHECK%"
+  if errorlevel 1 (
+    echo.
+    echo HIBA: a csomagok ujratelepites utan sem toltodnek be.
+    echo Masold be a fenti hibauzenetet Claude-nak, es megoldja.
+    pause
+    exit /b 1
+  )
+) else (
+  echo Csomagok rendben.
 )
 
 echo PyShape inditasa...
